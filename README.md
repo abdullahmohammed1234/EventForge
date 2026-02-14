@@ -146,13 +146,6 @@ flutter run
    - Copy the connection string
    - Replace `<password>` with your database user's password
 
-6. **Connection String Format**:
-```
-mongodb+srv://username:password@cluster.mongodb.net/event-planner?retryWrites=true&w=majority
-```
-
----
-
 ## 📁 Project Structure
 
 ### Backend
