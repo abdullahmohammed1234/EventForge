@@ -11,6 +11,8 @@ import 'features/auth/auth_provider.dart';
 import 'features/events/events_provider.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/register_screen.dart';
+import 'features/auth/splash_screen.dart';
+import 'features/auth/landing_screen.dart';
 import 'features/events/events_feed_screen.dart';
 import 'features/events/create_events_screen.dart';
 import 'features/profile/profile_screen.dart';
@@ -92,8 +94,13 @@ class EventPlannerApp extends StatelessWidget {
     routes: [
       GoRoute(
         path: '/',
-        name: 'home',
-        builder: (context, state) => AuthCheckScreen(),
+        name: 'splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: '/landing',
+        name: 'landing',
+        builder: (context, state) => const LandingScreen(),
       ),
       GoRoute(
         path: '/login',
@@ -132,8 +139,11 @@ class EventPlannerApp extends StatelessWidget {
 
       final isLoginPage = state.matchedLocation == '/login';
       final isRegisterPage = state.matchedLocation == '/register';
+      final isSplashPage = state.matchedLocation == '/';
+      final isLandingPage = state.matchedLocation == '/landing';
 
-      if (!isAuthenticated && !isLoginPage && !isRegisterPage) {
+      // Allow access to splash, landing, login, and register pages without auth
+      if (!isAuthenticated && !isLoginPage && !isRegisterPage && !isSplashPage && !isLandingPage) {
         return '/login';
       }
 

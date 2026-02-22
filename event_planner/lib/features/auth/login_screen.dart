@@ -49,7 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
         title: const Text('Login'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/register'),
+          onPressed: () => context.go('/landing'),
         ),
       ),
       body: SafeArea(
