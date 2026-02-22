@@ -13,8 +13,9 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // Navigate to landing screen after 5 seconds
-    Timer(const Duration(seconds: 5), () {
+    // Navigate to landing screen after 2 seconds
+    // The router's redirect will handle auth check
+    Timer(const Duration(seconds: 2), () {
       if (mounted) {
         context.go('/landing');
       }
