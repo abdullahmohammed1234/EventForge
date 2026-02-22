@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'auth_provider.dart';
 
 class LandingScreen extends StatelessWidget {
   const LandingScreen({super.key});
@@ -89,7 +91,14 @@ class LandingScreen extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => context.push('/login'),
+                  onPressed: () {
+                    final authProvider = context.read<AuthProvider>();
+                    if (authProvider.isAuthenticated) {
+                      context.go('/events');
+                    } else {
+                      context.push('/login');
+                    }
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Colors.white,
@@ -106,7 +115,14 @@ class LandingScreen extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
-                  onPressed: () => context.push('/register'),
+                  onPressed: () {
+                    final authProvider = context.read<AuthProvider>();
+                    if (authProvider.isAuthenticated) {
+                      context.go('/events');
+                    } else {
+                      context.push('/register');
+                    }
+                  },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Theme.of(context).colorScheme.primary,
                     side: BorderSide(

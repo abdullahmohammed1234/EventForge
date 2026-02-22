@@ -128,13 +128,25 @@ class EventPlannerApp extends StatelessWidget {
         builder: (context, state) => ProfileScreen(),
       ),
     ],
-    redirect: (context, state) async {
-      final authProvider = context.read<AuthProvider>();
+    redirect: (context, state) {
+      // Skip redirect for splash screen during initial load
+      if (state.matchedLocation == '/') {
+        return null;
+      }
+
+      // Try to get auth provider, skip redirect if not available
+      AuthProvider? authProvider;
+      try {
+        authProvider = Provider.of<AuthProvider>(context, listen: false);
+      } catch (_) {
+        return null;
+      }
+
       final isAuthenticated = authProvider.isAuthenticated;
       final isCheckingAuth = authProvider.isCheckingAuth;
 
       if (isCheckingAuth) {
-        return null; // Show splash while checking
+        return null;
       }
 
       final isLoginPage = state.matchedLocation == '/login';
@@ -147,6 +159,7 @@ class EventPlannerApp extends StatelessWidget {
         return '/login';
       }
 
+      // Redirect logged-in users away from auth pages
       if (isAuthenticated && (isLoginPage || isRegisterPage)) {
         return '/events';
       }
