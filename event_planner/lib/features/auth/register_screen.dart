@@ -66,7 +66,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         title: const Text('Create Account'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/login'),
+          onPressed: () => context.go('/landing'),
         ),
       ),
       body: SafeArea(
