@@ -1,10 +1,11 @@
-# Event Planner - Full-Stack Prototype
+# Event Forge Michelle Changed - Full-Stack Prototype
 
 A production-ready full-stack prototype for an event planning platform built with Flutter, Node.js, Express, and MongoDB Atlas.
 
 ## 📋 Project Overview
 
 This is Phase 1 of the Event Planner application, which includes:
+
 - User registration & login with JWT authentication
 - Event creation and viewing
 - Clean, scalable architecture ready for future features
@@ -12,11 +13,13 @@ This is Phase 1 of the Event Planner application, which includes:
 ## 🏗 Architecture
 
 ### Backend (Node.js + Express)
+
 - **Stack**: Node.js, Express, MongoDB Atlas, Mongoose, JWT
 - **Structure**: MVC pattern with controllers, routes, models, middleware
 - **Security**: bcrypt password hashing, JWT auth, helmet, cors, express-validator, morgan
 
 ### Frontend (Flutter)
+
 - **State Management**: Provider
 - **Storage**: flutter_secure_storage for JWT tokens
 - **HTTP Client**: dio, http
@@ -24,6 +27,7 @@ This is Phase 1 of the Event Planner application, which includes:
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - Node.js 18+
 - Flutter SDK 3.0+
 - MongoDB Atlas account
@@ -40,6 +44,7 @@ cp .env.example .env
 ```
 
 Edit `.env` with your values:
+
 ```env
 PORT=3000
 NODE_ENV=development
@@ -70,27 +75,27 @@ The API will be available at `http://localhost:3000`
 
 ### 4. API Endpoints
 
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| POST | `/api/auth/register` | Register new user | No |
-| POST | `/api/auth/login` | Login user | No |
-| GET | `/api/auth/me` | Get current user | Yes |
-| POST | `/api/auth/logout` | Logout user | Yes |
-| GET | `/api/events` | Get all events (with filters) | No |
-| GET | `/api/events/my-events` | Get user's created events | Yes |
-| GET | `/api/events/:id` | Get event by ID | No |
-| POST | `/api/events` | Create event | Yes |
-| PUT | `/api/events/:id` | Update event | Yes |
-| DELETE | `/api/events/:id` | Delete event | Yes |
+| Method | Endpoint                | Description                   | Auth |
+| ------ | ----------------------- | ----------------------------- | ---- |
+| POST   | `/api/auth/register`    | Register new user             | No   |
+| POST   | `/api/auth/login`       | Login user                    | No   |
+| GET    | `/api/auth/me`          | Get current user              | Yes  |
+| POST   | `/api/auth/logout`      | Logout user                   | Yes  |
+| GET    | `/api/events`           | Get all events (with filters) | No   |
+| GET    | `/api/events/my-events` | Get user's created events     | Yes  |
+| GET    | `/api/events/:id`       | Get event by ID               | No   |
+| POST   | `/api/events`           | Create event                  | Yes  |
+| PUT    | `/api/events/:id`       | Update event                  | Yes  |
+| DELETE | `/api/events/:id`       | Delete event                  | Yes  |
 
 ### Query Parameters for GET /api/events
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| page | integer | Page number (default: 1) |
-| limit | integer | Items per page (default: 20) |
-| city | string | Filter by city |
-| category | string | Filter by category (music, sports, arts, food, technology, business, social, outdoor, other) |
+| Parameter | Type    | Description                                                                                  |
+| --------- | ------- | -------------------------------------------------------------------------------------------- |
+| page      | integer | Page number (default: 1)                                                                     |
+| limit     | integer | Items per page (default: 20)                                                                 |
+| city      | string  | Filter by city                                                                               |
+| category  | string  | Filter by category (music, sports, arts, food, technology, business, social, outdoor, other) |
 
 ---
 
@@ -127,7 +132,7 @@ flutter run
 
 1. **Create Account**: Go to [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
 
-2. **Create Cluster**: 
+2. **Create Cluster**:
    - Click "Build a Database"
    - Choose "Free Tier" (M0)
    - Create cluster name (e.g., "event-planner")
@@ -149,6 +154,7 @@ flutter run
 ## 📁 Project Structure
 
 ### Backend
+
 ```
 backend/
 ├── src/
@@ -165,6 +171,7 @@ backend/
 ```
 
 ### Flutter
+
 ```
 event_planner/
 ├── lib/
