@@ -18,7 +18,7 @@ class EventService {
       'limit': limit.toString(),
     };
     if (city != null && city.isNotEmpty) queryParams['city'] = city;
-    if (category != null && city!.isNotEmpty) queryParams['category'] = category;
+    if (category != null && category.isNotEmpty) queryParams['category'] = category;
 
     final uri = Uri.parse('$baseUrl${Endpoints.events}')
         .replace(queryParameters: queryParams);
