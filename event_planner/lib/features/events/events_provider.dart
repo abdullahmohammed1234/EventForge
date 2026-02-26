@@ -83,18 +83,24 @@ class EventsProvider with ChangeNotifier {
   final FlutterSecureStorage storage;
 
   List<Event> _events = [];
+  List<Event> _savedEvents = [];
   bool _isLoading = false;
   bool _isLoadingMore = false;
   String? _error;
   int _currentPage = 1;
   bool _hasMore = true;
+  String? _currentSearchQuery;
+  String? _currentCategory;
 
   EventsProvider({
     required this.eventService,
     required this.storage,
-  });
+  }) {
+    _loadSavedEvents();
+  }
 
   List<Event> get events => _events;
+  List<Event> get savedEvents => _savedEvents;
   bool get isLoading => _isLoading;
   bool get isLoadingMore => _isLoadingMore;
   String? get error => _error;
@@ -102,6 +108,128 @@ class EventsProvider with ChangeNotifier {
 
   Future<String?> _getToken() async {
     return await storage.read(key: 'auth_token');
+  }
+
+  Future<void> _loadSavedEvents() async {
+    try {
+      final savedData = await storage.read(key: 'saved_events');
+      if (savedData != null) {
+        final List<dynamic> decoded = jsonDecode(savedData);
+        _savedEvents = decoded.map((e) => Event.fromJson(e)).toList();
+        notifyListeners();
+      }
+    } catch (e) {
+      // Ignore errors loading saved events
+    }
+  }
+
+  Future<void> _saveSavedEvents() async {
+    try {
+      final encoded = jsonEncode(_savedEvents.map((e) => e.toJson()).toList());
+      await storage.write(key: 'saved_events', value: encoded);
+    } catch (e) {
+      // Ignore errors saving events
+    }
+  }
+
+  bool isEventSaved(String eventId) {
+    return _savedEvents.any((e) => e.id == eventId);
+  }
+
+  Future<void> toggleSaveEvent(Event event) async {
+    if (isEventSaved(event.id)) {
+      _savedEvents.removeWhere((e) => e.id == event.id);
+    } else {
+      _savedEvents.add(event);
+    }
+    await _saveSavedEvents();
+    notifyListeners();
+  }
+
+  Future<bool> searchEvents(String query) async {
+    _currentSearchQuery = query;
+    _currentPage = 1;
+    _hasMore = true;
+    _events = [];
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final token = await _getToken();
+      final response = await eventService.getEvents(
+        city: query,
+        page: _currentPage,
+        token: token,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> eventsJson = data['data']['events'];
+        final pagination = data['data']['pagination'];
+
+        _events = eventsJson.map((e) => Event.fromJson(e)).toList();
+        _hasMore = _currentPage < pagination['pages'];
+        _currentPage++;
+
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _error = 'Failed to search events';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = 'Network error: ${e.toString()}';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> filterByCategory(String category) async {
+    _currentCategory = category;
+    _currentPage = 1;
+    _hasMore = true;
+    _events = [];
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final token = await _getToken();
+      final response = await eventService.getEvents(
+        category: category,
+        page: _currentPage,
+        token: token,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> eventsJson = data['data']['events'];
+        final pagination = data['data']['pagination'];
+
+        _events = eventsJson.map((e) => Event.fromJson(e)).toList();
+        _hasMore = _currentPage < pagination['pages'];
+        _currentPage++;
+
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _error = 'Failed to filter events';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = 'Network error: ${e.toString()}';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
   }
 
   Future<bool> fetchEvents({

@@ -14,10 +14,6 @@ class ProfileScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/events'),
-        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(

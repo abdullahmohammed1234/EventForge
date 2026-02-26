@@ -13,7 +13,7 @@ class AppConfig {
       // For physical device testing during development:
       // Change the IP below to your computer's local IP address
       // To find your IP: ipconfig (Windows) or ifconfig (Mac/Linux)
-      const String localIP = '172.16.111.242'; // <-- CHANGE THIS to your computer's IP
+      const String localIP = '192.168.4.28'; // <-- CHANGE THIS to your computer's IP
       const bool useLocalhostIP = false; // Set to true for emulator/simulator, false for physical device
       
       if (useLocalhostIP) {

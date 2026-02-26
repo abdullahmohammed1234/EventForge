@@ -35,7 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (success && mounted) {
-        context.go('/events');
+        context.go('/home');
       }
     }
   }

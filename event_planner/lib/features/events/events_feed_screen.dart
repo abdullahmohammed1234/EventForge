@@ -49,14 +49,6 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Discover Events'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () {
-              context.go('/profile');
-            },
-          ),
-        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
@@ -133,8 +125,9 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
 
 class EventCard extends StatelessWidget {
   final Event event;
+  final bool showSaveButton;
 
-  const EventCard({super.key, required this.event});
+  const EventCard({super.key, required this.event, this.showSaveButton = true});
 
   String _formatDate(DateTime date) {
     return DateFormat('EEE, MMM d, yyyy • h:mm a').format(date);
@@ -275,6 +268,29 @@ class EventCard extends StatelessWidget {
                           fontSize: 13,
                           color: Colors.grey[600],
                         ),
+                      ),
+                    ],
+                  ),
+                ],
+                if (showSaveButton) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Consumer<EventsProvider>(
+                        builder: (context, eventsProvider, _) {
+                          final isSaved = eventsProvider.isEventSaved(event.id);
+                          return TextButton.icon(
+                            onPressed: () {
+                              eventsProvider.toggleSaveEvent(event);
+                            },
+                            icon: Icon(
+                              isSaved ? Icons.bookmark : Icons.bookmark_outline,
+                              size: 20,
+                            ),
+                            label: Text(isSaved ? 'Saved' : 'Save'),
+                          );
+                        },
                       ),
                     ],
                   ),

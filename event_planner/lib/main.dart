@@ -13,7 +13,7 @@ import 'features/auth/login_screen.dart';
 import 'features/auth/register_screen.dart';
 import 'features/auth/splash_screen.dart';
 import 'features/auth/landing_screen.dart';
-import 'features/events/events_feed_screen.dart';
+import 'features/home/home_screen.dart';
 import 'features/events/create_events_screen.dart';
 import 'features/profile/profile_screen.dart';
 
@@ -113,9 +113,14 @@ class EventPlannerApp extends StatelessWidget {
         builder: (context, state) => RegisterScreen(),
       ),
       GoRoute(
+        path: '/home',
+        name: 'home',
+        builder: (context, state) => const HomeScreen(),
+      ),
+      GoRoute(
         path: '/events',
         name: 'events',
-        builder: (context, state) => EventsFeedScreen(),
+        builder: (context, state) => const HomeScreen(),
       ),
       GoRoute(
         path: '/events/create',
@@ -125,7 +130,7 @@ class EventPlannerApp extends StatelessWidget {
       GoRoute(
         path: '/profile',
         name: 'profile',
-        builder: (context, state) => ProfileScreen(),
+        builder: (context, state) => const HomeScreen(),
       ),
     ],
     redirect: (context, state) {
@@ -161,7 +166,7 @@ class EventPlannerApp extends StatelessWidget {
 
       // Redirect logged-in users away from auth pages
       if (isAuthenticated && (isLoginPage || isRegisterPage)) {
-        return '/events';
+        return '/home';
       }
 
       return null;
@@ -169,7 +174,7 @@ class EventPlannerApp extends StatelessWidget {
   );
 }
 
-// Auth check screen - redirects to login or events
+// Auth check screen - redirects to login or home
 class AuthCheckScreen extends StatelessWidget {
   const AuthCheckScreen({super.key});
 
@@ -186,7 +191,7 @@ class AuthCheckScreen extends StatelessWidget {
     }
 
     if (authProvider.isAuthenticated) {
-      return const EventsFeedScreen();
+      return const HomeScreen();
     }
 
     return const LoginScreen();
