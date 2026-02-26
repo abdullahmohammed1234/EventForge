@@ -146,7 +146,7 @@ class EventsProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> searchEvents(String query) async {
+  Future<bool> searchEvents(String query, {String? category}) async {
     _currentSearchQuery = query;
     _currentPage = 1;
     _hasMore = true;
@@ -157,8 +157,9 @@ class EventsProvider with ChangeNotifier {
 
     try {
       final token = await _getToken();
-      final response = await eventService.getEvents(
-        city: query,
+      final response = await eventService.searchEvents(
+        query: query,
+        category: category,
         page: _currentPage,
         token: token,
       );

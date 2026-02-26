@@ -46,7 +46,8 @@ class _SearchScreenState extends State<SearchScreen> {
     final eventsProvider = context.read<EventsProvider>();
     
     if (query.isNotEmpty) {
-      eventsProvider.searchEvents(query);
+      final category = _selectedCategory == 'all' ? null : _selectedCategory;
+      eventsProvider.searchEvents(query, category: category);
     } else {
       eventsProvider.fetchEvents(refresh: true);
     }

@@ -19,6 +19,14 @@ const getEvents = asyncWrapper(async (req, res, next) => {
     isCancelled: false,
   };
 
+  // Search by title or description
+  if (req.query.search) {
+    filter.$or = [
+      { title: { $regex: req.query.search, $options: 'i' } },
+      { description: { $regex: req.query.search, $options: 'i' } },
+    ];
+  }
+
   // Filter by city
   if (req.query.city) {
     filter.city = { $regex: req.query.city, $options: 'i' };

@@ -101,6 +101,33 @@ class EventService {
     ).timeout(const Duration(seconds: 10));
   }
 
+  Future<http.Response> searchEvents({
+    required String query,
+    String? category,
+    int page = 1,
+    int limit = 20,
+    String? token,
+  }) async {
+    final queryParams = <String, String>{
+      'search': query,
+      'page': page.toString(),
+      'limit': limit.toString(),
+    };
+    if (category != null && category.isNotEmpty && category != 'all') {
+      queryParams['category'] = category;
+    }
+
+    final uri = Uri.parse('$baseUrl${Endpoints.events}')
+        .replace(queryParameters: queryParams);
+
+    final headers = {'Content-Type': 'application/json'};
+    if (token != null) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+
+    return _client.get(uri, headers: headers).timeout(const Duration(seconds: 10));
+  }
+
   void dispose() {
     _client.close();
   }
