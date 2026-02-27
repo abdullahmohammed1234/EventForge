@@ -2,68 +2,43 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../core/config/app_config.dart';
 import 'events_provider.dart';
-import '../auth/auth_provider.dart';
 
-class EventsFeedScreen extends StatefulWidget {
-  const EventsFeedScreen({super.key});
+class MyEventsScreen extends StatefulWidget {
+  const MyEventsScreen({super.key});
 
   @override
-  State<EventsFeedScreen> createState() => _EventsFeedScreenState();
+  State<MyEventsScreen> createState() => _MyEventsScreenState();
 }
 
-class _EventsFeedScreenState extends State<EventsFeedScreen> {
-  final ScrollController _scrollController = ScrollController();
-
+class _MyEventsScreenState extends State<MyEventsScreen> {
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<EventsProvider>().fetchEvents(refresh: true);
-    });
-    _scrollController.addListener(_scrollListener);
-  }
-
-  void _scrollListener() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      if (context.read<EventsProvider>().hasMore &&
-          !context.read<EventsProvider>().isLoadingMore) {
-        context.read<EventsProvider>().loadMoreEvents();
+      final provider = context.read<EventsProvider>();
+      // Refresh registered events when screen loads
+      if (provider.registeredEvents.isEmpty) {
+        provider.fetchRegisteredEvents(refresh: true);
       }
-    }
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final eventsProvider = context.watch<EventsProvider>();
-    final authProvider = context.watch<AuthProvider>();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Discover Events'),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          context.go('/events/create');
-        },
-        label: const Text('Create Event'),
-        icon: const Icon(Icons.add),
+        title: const Text('My Events'),
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          await eventsProvider.fetchEvents(refresh: true);
+          await eventsProvider.fetchRegisteredEvents(refresh: true);
         },
-        child: eventsProvider.isLoading && eventsProvider.events.isEmpty
+        child: eventsProvider.isLoading && eventsProvider.registeredEvents.isEmpty
             ? const Center(child: CircularProgressIndicator())
-            : eventsProvider.events.isEmpty
+            : eventsProvider.registeredEvents.isEmpty
                 ? ListView(
                     children: [
                       Center(
@@ -73,13 +48,13 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
-                                Icons.event_busy,
+                                Icons.event_available,
                                 size: 80,
                                 color: Colors.grey[400],
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                'No events found',
+                                'No registered events',
                                 style: TextStyle(
                                   fontSize: 18,
                                   color: Colors.grey[600],
@@ -87,11 +62,20 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Be the first to create an event!',
+                                'Browse events and register to see them here!',
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: Colors.grey[500],
                                 ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 24),
+                              ElevatedButton(
+                                onPressed: () {
+                                  // Navigate to events tab
+                                  context.go('/events');
+                                },
+                                child: const Text('Discover Events'),
                               ),
                             ],
                           ),
@@ -100,22 +84,11 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
                     ],
                   )
                 : ListView.builder(
-                    controller: _scrollController,
                     padding: const EdgeInsets.all(16),
-                    itemCount: eventsProvider.events.length +
-                        (eventsProvider.isLoadingMore ? 1 : 0),
+                    itemCount: eventsProvider.registeredEvents.length,
                     itemBuilder: (context, index) {
-                      if (index >= eventsProvider.events.length) {
-                        return const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(16),
-                            child: CircularProgressIndicator(),
-                          ),
-                        );
-                      }
-
-                      final event = eventsProvider.events[index];
-                      return EventCard(event: event);
+                      final event = eventsProvider.registeredEvents[index];
+                      return _RegisteredEventCard(event: event);
                     },
                   ),
       ),
@@ -123,13 +96,10 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
   }
 }
 
-class EventCard extends StatelessWidget {
+class _RegisteredEventCard extends StatelessWidget {
   final Event event;
 
-  const EventCard({
-    super.key,
-    required this.event,
-  });
+  const _RegisteredEventCard({required this.event});
 
   String _formatDate(DateTime date) {
     return DateFormat('EEE, MMM d, yyyy • h:mm a').format(date);
@@ -164,18 +134,33 @@ class EventCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Registered badge
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: _getCategoryColor(event.category).withOpacity(0.1),
+                color: Colors.green.withOpacity(0.1),
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(12),
                 ),
               ),
               child: Row(
-                mainAxisSize: MainAxisSize.min,
                 children: [
+                  const Icon(
+                    Icons.check_circle,
+                    size: 16,
+                    color: Colors.green,
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'REGISTERED',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.green,
+                    ),
+                  ),
+                  const Spacer(),
                   Icon(
                     _getCategoryIcon(event.category),
                     size: 16,
@@ -257,26 +242,23 @@ class EventCard extends StatelessWidget {
                       ),
                     ),
                   ],
-                  if (event.creatorName != null) ...[
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.person,
-                          size: 16,
-                          color: Colors.grey,
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          _showCancelDialog(context);
+                        },
+                        icon: const Icon(Icons.close, size: 18),
+                        label: const Text('Cancel Registration'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          side: const BorderSide(color: Colors.red),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'By ${event.creatorName}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -284,6 +266,49 @@ class EventCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _showCancelDialog(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Registration?'),
+        content: Text(
+          'Are you sure you want to cancel your registration for "${event.title}"?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No, Keep It'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Yes, Cancel'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      final eventsProvider = context.read<EventsProvider>();
+      final success = await eventsProvider.unregisterFromEvent(event.id);
+      if (success && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Registration cancelled successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else if (!success && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(eventsProvider.error ?? 'Failed to cancel registration'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   IconData _getCategoryIcon(String category) {

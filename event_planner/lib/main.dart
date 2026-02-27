@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'core/config/app_config.dart';
 import 'core/api/auth_service.dart';
@@ -15,11 +16,14 @@ import 'features/auth/splash_screen.dart';
 import 'features/auth/landing_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/events/create_events_screen.dart';
+import 'features/events/event_details_screen.dart';
 import 'features/profile/profile_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Load environment variables from .env file
+  await dotenv.load(fileName: ".env");
   // Initialize secure storage
   final storage = FlutterSecureStorage();
   
@@ -126,6 +130,14 @@ class EventPlannerApp extends StatelessWidget {
         path: '/events/create',
         name: 'create-event',
         builder: (context, state) => CreateEventScreen(),
+      ),
+      GoRoute(
+        path: '/events/:id',
+        name: 'event-details',
+        builder: (context, state) {
+          final eventId = state.pathParameters['id']!;
+          return EventDetailsScreen(eventId: eventId);
+        },
       ),
       GoRoute(
         path: '/profile',

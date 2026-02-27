@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../events/events_feed_screen.dart';
+import '../events/my_events_screen.dart';
+import '../events/events_provider.dart';
 import '../search/search_screen.dart';
-import '../saved/saved_screen.dart';
 import '../profile/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -13,13 +15,30 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+  bool _isInitialized = false;
 
   final List<Widget> _screens = const [
     EventsFeedScreen(),
     SearchScreen(),
-    SavedScreen(),
+    MyEventsScreen(),
     ProfileScreen(),
   ];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      _isInitialized = true;
+      // Initialize events data on first load
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        debugPrint('HomeScreen: Calling initialize...');
+        final provider = Provider.of<EventsProvider>(context, listen: false);
+        provider.initialize().then((_) {
+          debugPrint('HomeScreen: Initialize complete - registered: ${provider.registeredEvents.length}');
+        });
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,9 +66,9 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'Search',
           ),
           NavigationDestination(
-            icon: Icon(Icons.bookmark_outline),
-            selectedIcon: Icon(Icons.bookmark),
-            label: 'Saved',
+            icon: Icon(Icons.event_available_outlined),
+            selectedIcon: Icon(Icons.event_available),
+            label: 'My Events',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),

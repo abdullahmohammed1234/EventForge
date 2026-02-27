@@ -1,5 +1,43 @@
 const mongoose = require('mongoose');
 
+// Sub-event schema for LettuceMeet-style scheduling
+const subEventSchema = new mongoose.Schema(
+  {
+    title: {
+      type: String,
+      required: [true, 'Sub-event title is required'],
+      trim: true,
+      maxlength: [200, 'Title cannot exceed 200 characters'],
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: [1000, 'Description cannot exceed 1000 characters'],
+    },
+    startTime: {
+      type: Date,
+      required: [true, 'Sub-event start time is required'],
+    },
+    endTime: {
+      type: Date,
+      required: [true, 'Sub-event end time is required'],
+    },
+    location: {
+      type: String,
+      trim: true,
+    },
+    maxAttendees: {
+      type: Number,
+      min: [1, 'Max attendees must be at least 1'],
+    },
+    currentAttendees: {
+      type: Number,
+      default: 0,
+    },
+  },
+  { timestamps: true }
+);
+
 const eventSchema = new mongoose.Schema(
   {
     title: {
@@ -65,6 +103,24 @@ const eventSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    attendees: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+        },
+        registeredAt: {
+          type: Date,
+          default: Date.now,
+        },
+        status: {
+          type: String,
+          enum: ['registered', 'cancelled'],
+          default: 'registered',
+        },
+      },
+    ],
+    subEvents: [subEventSchema],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

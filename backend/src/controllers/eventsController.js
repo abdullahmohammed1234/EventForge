@@ -1,4 +1,5 @@
 const { validationResult } = require('express-validator');
+const mongoose = require('mongoose');
 const Event = require('../models/Event');
 const asyncWrapper = require('../utils/asyncWrapper');
 const { APIError } = require('../middleware/errorHandler');
@@ -81,9 +82,23 @@ const getEvent = asyncWrapper(async (req, res, next) => {
     return next(new APIError('Event not found', 404));
   }
 
+  // Check if user is registered (if authenticated)
+  let isUserRegistered = false;
+  if (req.userId) {
+    const userObjectId = new mongoose.Types.ObjectId(req.userId);
+    const registration = event.attendees.find(
+      (a) => a.user.toString() === userObjectId.toString() && a.status === 'registered'
+    );
+    isUserRegistered = !!registration;
+  }
+
+  // Convert to plain object and add isUserRegistered
+  const eventObj = event.toObject();
+  eventObj.isUserRegistered = isUserRegistered;
+
   res.json({
     success: true,
-    data: { event },
+    data: { event: eventObj },
   });
 });
 
@@ -295,6 +310,152 @@ const getMyEvents = asyncWrapper(async (req, res, next) => {
   });
 });
 
+/**
+ * @desc    Register for an event
+ * @route   POST /api/events/:id/register
+ * @access  Private
+ */
+const registerForEvent = asyncWrapper(async (req, res, next) => {
+  const event = await Event.findById(req.params.id);
+
+  if (!event) {
+    return next(new APIError('Event not found', 404));
+  }
+
+  if (event.isCancelled) {
+    return next(new APIError('Event has been cancelled', 400));
+  }
+
+  // Convert userId to ObjectId for storage
+  const userObjectId = new mongoose.Types.ObjectId(req.userId);
+
+  // Check if user is already registered
+  const existingRegistration = event.attendees.find(
+    (a) => a.user.toString() === userObjectId.toString() && a.status === 'registered'
+  );
+
+  if (existingRegistration) {
+    return next(new APIError('You are already registered for this event', 400));
+  }
+
+  // Check if event is full
+  if (event.maxAttendees && event.currentAttendees >= event.maxAttendees) {
+    return next(new APIError('Event is full', 400));
+  }
+
+  // Check if user was previously registered and cancelled
+  const previousRegistration = event.attendees.find(
+    (a) => a.user.toString() === userObjectId.toString() && a.status === 'cancelled'
+  );
+
+  if (previousRegistration) {
+    // Reactivate registration
+    previousRegistration.status = 'registered';
+    previousRegistration.registeredAt = new Date();
+  } else {
+    // Add new attendee - store as ObjectId
+    event.attendees.push({
+      user: userObjectId,
+      status: 'registered',
+    });
+  }
+
+  event.currentAttendees += 1;
+  await event.save();
+
+  res.status(201).json({
+    success: true,
+    message: 'Successfully registered for the event',
+    data: {
+      eventId: event._id,
+      registered: true,
+    },
+  });
+});
+
+/**
+ * @desc    Cancel registration for an event
+ * @route   POST /api/events/:id/unregister
+ * @access  Private
+ */
+const unregisterFromEvent = asyncWrapper(async (req, res, next) => {
+  const event = await Event.findById(req.params.id);
+
+  if (!event) {
+    return next(new APIError('Event not found', 404));
+  }
+
+  // Convert userId to ObjectId for comparison
+  const userObjectId = new mongoose.Types.ObjectId(req.userId);
+
+  // Check if user is registered
+  const registrationIndex = event.attendees.findIndex(
+    (a) => a.user.toString() === userObjectId.toString() && a.status === 'registered'
+  );
+
+  if (registrationIndex === -1) {
+    return next(new APIError('You are not registered for this event', 400));
+  }
+
+  // Cancel registration
+  event.attendees[registrationIndex].status = 'cancelled';
+  event.currentAttendees = Math.max(0, event.currentAttendees - 1);
+  await event.save();
+
+  res.json({
+    success: true,
+    message: 'Successfully cancelled registration',
+    data: {
+      eventId: event._id,
+      registered: false,
+    },
+  });
+});
+
+/**
+ * @desc    Get events user has registered for
+ * @route   GET /api/events/registered
+ * @access  Private
+ */
+const getRegisteredEvents = asyncWrapper(async (req, res, next) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  const skip = (page - 1) * limit;
+
+  // Convert userId to ObjectId for proper MongoDB comparison
+  const userObjectId = new mongoose.Types.ObjectId(req.userId);
+
+  const [events, total] = await Promise.all([
+    Event.find({
+      'attendees.user': userObjectId,
+      'attendees.status': 'registered',
+      isCancelled: false,
+    })
+      .sort({ startTime: 1 })
+      .skip(skip)
+      .limit(limit)
+      .populate('createdBy', 'displayName email avatarUrl city'),
+    Event.countDocuments({
+      'attendees.user': userObjectId,
+      'attendees.status': 'registered',
+      isCancelled: false,
+    }),
+  ]);
+
+  res.json({
+    success: true,
+    data: {
+      events,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+    },
+  });
+});
+
 module.exports = {
   getEvents,
   getEvent,
@@ -302,4 +463,7 @@ module.exports = {
   updateEvent,
   deleteEvent,
   getMyEvents,
+  registerForEvent,
+  unregisterFromEvent,
+  getRegisteredEvents,
 };

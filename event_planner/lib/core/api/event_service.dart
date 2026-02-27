@@ -101,6 +101,53 @@ class EventService {
     ).timeout(const Duration(seconds: 10));
   }
 
+  Future<http.Response> getRegisteredEvents({
+    required String token,
+    int page = 1,
+    int limit = 20,
+  }) async {
+    final uri = Uri.parse('$baseUrl${Endpoints.registeredEvents}').replace(
+      queryParameters: {
+        'page': page.toString(),
+        'limit': limit.toString(),
+      },
+    );
+
+    return _client.get(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    ).timeout(const Duration(seconds: 10));
+  }
+
+  Future<http.Response> registerForEvent({
+    required String eventId,
+    required String token,
+  }) async {
+    return _client.post(
+      Uri.parse('$baseUrl${EventEndpoints.registerForEvent(eventId)}'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    ).timeout(const Duration(seconds: 10));
+  }
+
+  Future<http.Response> unregisterFromEvent({
+    required String eventId,
+    required String token,
+  }) async {
+    return _client.post(
+      Uri.parse('$baseUrl${EventEndpoints.unregisterFromEvent(eventId)}'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    ).timeout(const Duration(seconds: 10));
+  }
+
   Future<http.Response> searchEvents({
     required String query,
     String? category,
