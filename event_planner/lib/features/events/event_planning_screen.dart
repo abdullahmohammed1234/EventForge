@@ -104,10 +104,17 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
     if (event == null) return;
     
     String query;
-    if (event.latitude != null && event.longitude != null) {
+    if (event.latitude != null && event.longitude != null &&
+        event.latitude != 0 && event.longitude != 0) {
       query = '${event.latitude},${event.longitude}';
     } else {
-      query = Uri.encodeComponent('${event.address ?? event.city}, ${event.city}');
+      // Use address or city for geocoding
+      final locationString = event.address ?? event.city;
+      if (locationString.isNotEmpty) {
+        query = Uri.encodeComponent(locationString);
+      } else {
+        return; // No location available
+      }
     }
     
     final url = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$query&travelmode=driving');
@@ -124,10 +131,17 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
     if (event == null) return;
     
     String query;
-    if (event.latitude != null && event.longitude != null) {
+    if (event.latitude != null && event.longitude != null &&
+        event.latitude != 0 && event.longitude != 0) {
       query = '${event.latitude},${event.longitude}';
     } else {
-      query = Uri.encodeComponent('${event.address ?? event.city}, ${event.city}');
+      // Use address or city for geocoding
+      final locationString = event.address ?? event.city;
+      if (locationString.isNotEmpty) {
+        query = Uri.encodeComponent(locationString);
+      } else {
+        return; // No location available
+      }
     }
     
     final url = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$query&travelmode=transit');
@@ -138,7 +152,8 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
   }
 
   Set<Marker> _getMarkers(Event event) {
-    if (event.latitude != null && event.longitude != null) {
+    if (event.latitude != null && event.longitude != null &&
+        event.latitude != 0 && event.longitude != 0) {
       return {
         Marker(
           markerId: MarkerId(event.id),
@@ -154,16 +169,18 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
   }
 
   CameraPosition _getInitialPosition(Event event) {
-    if (event.latitude != null && event.longitude != null) {
+    if (event.latitude != null && event.longitude != null &&
+        event.latitude != 0 && event.longitude != 0) {
       return CameraPosition(
         target: LatLng(event.latitude!, event.longitude!),
         zoom: 14,
       );
     }
-    // Default position (will be centered on city)
+    // Default position - center on city if available
+    // For now, show a message that location is not available
     return const CameraPosition(
       target: LatLng(0, 0),
-      zoom: 10,
+      zoom: 1,
     );
   }
 
@@ -427,7 +444,8 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
             const SizedBox(height: 16),
             
             // Map
-            if (event.latitude != null && event.longitude != null)
+            if (event.latitude != null && event.longitude != null &&
+                event.latitude != 0 && event.longitude != 0)
               Container(
                 height: 200,
                 decoration: BoxDecoration(
@@ -472,18 +490,6 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
             // Action buttons
             Row(
               children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _getDirections,
-                    icon: const Icon(Icons.directions),
-                    label: const Text('Get Directions'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: _openGoogleMaps,
@@ -540,7 +546,8 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
                       ),
                     ),
                   ],
-                  if (event.latitude != null && event.longitude != null) ...[
+                  if (event.latitude != null && event.longitude != null &&
+                      event.latitude != 0 && event.longitude != 0) ...[
                     const SizedBox(height: 4),
                     Padding(
                       padding: const EdgeInsets.only(left: 24),

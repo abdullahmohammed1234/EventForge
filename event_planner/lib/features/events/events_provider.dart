@@ -102,6 +102,21 @@ class Event {
           .toList();
     }
     
+    // Extract and validate coordinates
+    double? lat;
+    double? lng;
+    if (json['location'] != null && json['location']['coordinates'] != null) {
+      final coords = json['location']['coordinates'];
+      // Validate coordinates are not the default [0, 0]
+      lng = (coords[0] as num).toDouble();
+      lat = (coords[1] as num).toDouble();
+      // Only use coordinates if they are valid (not 0,0)
+      if (lat == 0 && lng == 0) {
+        lat = null;
+        lng = null;
+      }
+    }
+    
     return Event(
       id: json['id'] ?? json['_id'],
       title: json['title'],
@@ -109,8 +124,8 @@ class Event {
       category: json['category'] ?? 'other',
       city: json['city'],
       address: json['address'],
-      latitude: json['location'] != null ? (json['location']['coordinates'][1] as num).toDouble() : null,
-      longitude: json['location'] != null ? (json['location']['coordinates'][0] as num).toDouble() : null,
+      latitude: lat,
+      longitude: lng,
       startTime: DateTime.parse(json['startTime']),
       endTime: json['endTime'] != null ? DateTime.parse(json['endTime']) : null,
       maxAttendees: json['maxAttendees'] != null ? (json['maxAttendees'] as num).toInt() : null,
