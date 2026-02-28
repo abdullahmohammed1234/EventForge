@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'core/config/app_config.dart';
 import 'core/api/auth_service.dart';
@@ -13,13 +14,17 @@ import 'features/auth/login_screen.dart';
 import 'features/auth/register_screen.dart';
 import 'features/auth/splash_screen.dart';
 import 'features/auth/landing_screen.dart';
-import 'features/events/events_feed_screen.dart';
+import 'features/home/home_screen.dart';
 import 'features/events/create_events_screen.dart';
+import 'features/events/event_details_screen.dart';
+import 'features/events/event_planning_screen.dart';
 import 'features/profile/profile_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Load environment variables from .env file
+  await dotenv.load(fileName: ".env");
   // Initialize secure storage
   final storage = FlutterSecureStorage();
   
@@ -113,9 +118,14 @@ class EventPlannerApp extends StatelessWidget {
         builder: (context, state) => RegisterScreen(),
       ),
       GoRoute(
+        path: '/home',
+        name: 'home',
+        builder: (context, state) => const HomeScreen(),
+      ),
+      GoRoute(
         path: '/events',
         name: 'events',
-        builder: (context, state) => EventsFeedScreen(),
+        builder: (context, state) => const HomeScreen(),
       ),
       GoRoute(
         path: '/events/create',
@@ -123,18 +133,46 @@ class EventPlannerApp extends StatelessWidget {
         builder: (context, state) => CreateEventScreen(),
       ),
       GoRoute(
+        path: '/events/:id',
+        name: 'event-details',
+        builder: (context, state) {
+          final eventId = state.pathParameters['id']!;
+          return EventDetailsScreen(eventId: eventId);
+        },
+      ),
+      GoRoute(
+        path: '/events/:id/plan',
+        name: 'event-planning',
+        builder: (context, state) {
+          final eventId = state.pathParameters['id']!;
+          return EventPlanningScreen(eventId: eventId);
+        },
+      ),
+      GoRoute(
         path: '/profile',
         name: 'profile',
-        builder: (context, state) => ProfileScreen(),
+        builder: (context, state) => const HomeScreen(),
       ),
     ],
-    redirect: (context, state) async {
-      final authProvider = context.read<AuthProvider>();
+    redirect: (context, state) {
+      // Skip redirect for splash screen during initial load
+      if (state.matchedLocation == '/') {
+        return null;
+      }
+
+      // Try to get auth provider, skip redirect if not available
+      AuthProvider? authProvider;
+      try {
+        authProvider = Provider.of<AuthProvider>(context, listen: false);
+      } catch (_) {
+        return null;
+      }
+
       final isAuthenticated = authProvider.isAuthenticated;
       final isCheckingAuth = authProvider.isCheckingAuth;
 
       if (isCheckingAuth) {
-        return null; // Show splash while checking
+        return null;
       }
 
       final isLoginPage = state.matchedLocation == '/login';
@@ -147,8 +185,9 @@ class EventPlannerApp extends StatelessWidget {
         return '/login';
       }
 
+      // Redirect logged-in users away from auth pages
       if (isAuthenticated && (isLoginPage || isRegisterPage)) {
-        return '/events';
+        return '/home';
       }
 
       return null;
@@ -156,7 +195,7 @@ class EventPlannerApp extends StatelessWidget {
   );
 }
 
-// Auth check screen - redirects to login or events
+// Auth check screen - redirects to login or home
 class AuthCheckScreen extends StatelessWidget {
   const AuthCheckScreen({super.key});
 
@@ -173,7 +212,7 @@ class AuthCheckScreen extends StatelessWidget {
     }
 
     if (authProvider.isAuthenticated) {
-      return const EventsFeedScreen();
+      return const HomeScreen();
     }
 
     return const LoginScreen();

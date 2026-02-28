@@ -50,3 +50,6 @@ app.*.map.json
 # Local configuration (SDK paths - machine specific)
 android/local.properties
 android/.gradle/
+
+# Environment variables (contains local IP - do not commit)
+.env

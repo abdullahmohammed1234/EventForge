@@ -1,4 +1,4 @@
-# Event Forge Michelle Changed - Full-Stack Prototype
+# EventForge - Full-Stack Prototype
 
 A production-ready full-stack prototype for an event planning platform built with Flutter, Node.js, Express, and MongoDB Atlas.
 

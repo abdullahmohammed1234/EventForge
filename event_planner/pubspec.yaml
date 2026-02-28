@@ -22,6 +22,9 @@ dependencies:
   # Secure Storage for JWT
   flutter_secure_storage: ^9.0.0
 
+  # Local Storage for saved events
+  shared_preferences: ^2.2.2
+
   # Date/Time
   intl: ^0.18.1
 
@@ -34,6 +37,22 @@ dependencies:
   # UI Helpers
   google_fonts: ^6.1.0
   flutter_svg: ^2.0.9
+
+  # Environment Variables
+  flutter_dotenv: ^5.1.0
+
+  # QR Code Generation
+  qr_flutter: ^4.1.0
+
+  # Google Maps
+  google_maps_flutter: ^2.5.3
+  geolocator: ^11.0.0
+
+  # UUID for unique QR code generation
+  uuid: ^4.3.3
+
+  # URL Launcher for opening maps
+  url_launcher: ^6.2.5
 
 dev_dependencies:
   flutter_test:

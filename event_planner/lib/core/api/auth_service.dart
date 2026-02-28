@@ -5,7 +5,7 @@ import '../config/app_config.dart';
 class AuthService {
   final String baseUrl = AppConfig.apiBaseUrl;
 
-  http.Client get _client => http.Client();
+  final http.Client _client = http.Client();
 
   Future<http.Response> register({
     required String email,

@@ -47,6 +47,13 @@ router.get(
 );
 
 /**
+ * @desc    Get events user has registered for
+ * @route   GET /api/events/registered
+ * @access  Private
+ */
+router.get('/registered', auth, asyncWrapper(eventsController.getRegisteredEvents));
+
+/**
  * @desc    Get events created by current user
  * @route   GET /api/events/my-events
  * @access  Private
@@ -205,5 +212,26 @@ router.put(
  * @access  Private (Owner only)
  */
 router.delete('/:id', auth, asyncWrapper(eventsController.deleteEvent));
+
+/**
+ * @desc    Register for an event
+ * @route   POST /api/events/:id/register
+ * @access  Private
+ */
+router.post('/:id/register', auth, asyncWrapper(eventsController.registerForEvent));
+
+/**
+ * @desc    Cancel registration for an event
+ * @route   POST /api/events/:id/unregister
+ * @access  Private
+ */
+router.post('/:id/unregister', auth, asyncWrapper(eventsController.unregisterFromEvent));
+
+/**
+ * @desc    Get events user has registered for
+ * @route   GET /api/events/registered
+ * @access  Private
+ */
+router.get('/registered', auth, asyncWrapper(eventsController.getRegisteredEvents));
 
 module.exports = router;

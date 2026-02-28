@@ -18,7 +18,7 @@ class EventService {
       'limit': limit.toString(),
     };
     if (city != null && city.isNotEmpty) queryParams['city'] = city;
-    if (category != null && city!.isNotEmpty) queryParams['category'] = category;
+    if (category != null && category.isNotEmpty) queryParams['category'] = category;
 
     final uri = Uri.parse('$baseUrl${Endpoints.events}')
         .replace(queryParameters: queryParams);
@@ -99,6 +99,80 @@ class EventService {
         'Authorization': 'Bearer $token',
       },
     ).timeout(const Duration(seconds: 10));
+  }
+
+  Future<http.Response> getRegisteredEvents({
+    required String token,
+    int page = 1,
+    int limit = 20,
+  }) async {
+    final uri = Uri.parse('$baseUrl${Endpoints.registeredEvents}').replace(
+      queryParameters: {
+        'page': page.toString(),
+        'limit': limit.toString(),
+      },
+    );
+
+    return _client.get(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    ).timeout(const Duration(seconds: 10));
+  }
+
+  Future<http.Response> registerForEvent({
+    required String eventId,
+    required String token,
+  }) async {
+    return _client.post(
+      Uri.parse('$baseUrl${EventEndpoints.registerForEvent(eventId)}'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    ).timeout(const Duration(seconds: 10));
+  }
+
+  Future<http.Response> unregisterFromEvent({
+    required String eventId,
+    required String token,
+  }) async {
+    return _client.post(
+      Uri.parse('$baseUrl${EventEndpoints.unregisterFromEvent(eventId)}'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    ).timeout(const Duration(seconds: 10));
+  }
+
+  Future<http.Response> searchEvents({
+    required String query,
+    String? category,
+    int page = 1,
+    int limit = 20,
+    String? token,
+  }) async {
+    final queryParams = <String, String>{
+      'search': query,
+      'page': page.toString(),
+      'limit': limit.toString(),
+    };
+    if (category != null && category.isNotEmpty && category != 'all') {
+      queryParams['category'] = category;
+    }
+
+    final uri = Uri.parse('$baseUrl${Endpoints.events}')
+        .replace(queryParameters: queryParams);
+
+    final headers = {'Content-Type': 'application/json'};
+    if (token != null) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+
+    return _client.get(uri, headers: headers).timeout(const Duration(seconds: 10));
   }
 
   void dispose() {

@@ -52,7 +52,7 @@ app.get('/health', (req, res) => {
 // Root endpoint - API info
 app.get('/', (req, res) => {
   res.json({
-    name: 'StormForge 2026 Event Planner API',
+    name: 'EventForge 2026 Event Planner API',
     version: '1.0.0',
     message: 'API server is running. Use /api for endpoints or /health for status.',
     endpoints: {
