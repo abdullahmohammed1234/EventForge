@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../core/config/app_config.dart';
 import 'events_provider.dart';
-import '../auth/auth_provider.dart';
 
 class EventsFeedScreen extends StatefulWidget {
   const EventsFeedScreen({super.key});
@@ -44,7 +42,6 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
   @override
   Widget build(BuildContext context) {
     final eventsProvider = context.watch<EventsProvider>();
-    final authProvider = context.watch<AuthProvider>();
 
     return Scaffold(
       appBar: AppBar(

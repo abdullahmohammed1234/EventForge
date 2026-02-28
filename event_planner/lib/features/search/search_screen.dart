@@ -44,10 +44,34 @@ class _SearchScreenState extends State<SearchScreen> {
   void _performSearch() {
     final query = _searchController.text.trim();
     final eventsProvider = context.read<EventsProvider>();
+    final category = _selectedCategory == 'all' ? null : _selectedCategory;
     
     if (query.isNotEmpty) {
-      final category = _selectedCategory == 'all' ? null : _selectedCategory;
+      // Search by name - now also searches city in the backend
       eventsProvider.searchEvents(query, category: category);
+    } else {
+      eventsProvider.fetchEvents(refresh: true);
+    }
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    context.read<EventsProvider>().fetchEvents(refresh: true);
+  }
+
+  void _onCategorySelected(String category) {
+    final eventsProvider = context.read<EventsProvider>();
+    setState(() {
+      _selectedCategory = category;
+    });
+    
+    final query = _searchController.text.trim();
+    final cat = category == 'all' ? null : category;
+    
+    if (query.isNotEmpty) {
+      eventsProvider.searchEvents(query, category: cat);
+    } else if (cat != null) {
+      eventsProvider.filterByCategory(cat);
     } else {
       eventsProvider.fetchEvents(refresh: true);
     }
@@ -63,19 +87,17 @@ class _SearchScreenState extends State<SearchScreen> {
       ),
       body: Column(
         children: [
+          // Single Search TextField
           Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search events...',
+                hintText: 'Search events by name or location...',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    _searchController.clear();
-                    eventsProvider.fetchEvents(refresh: true);
-                  },
+                  onPressed: _clearSearch,
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -84,6 +106,20 @@ class _SearchScreenState extends State<SearchScreen> {
               onSubmitted: (_) => _performSearch(),
             ),
           ),
+          // Search Button
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _performSearch,
+                icon: const Icon(Icons.search),
+                label: const Text('Search'),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Category Filter
           SizedBox(
             height: 40,
             child: ListView.builder(
@@ -101,14 +137,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     ),
                     selected: isSelected,
                     onSelected: (selected) {
-                      setState(() {
-                        _selectedCategory = category;
-                      });
-                      if (category == 'all') {
-                        eventsProvider.fetchEvents(refresh: true);
-                      } else {
-                        eventsProvider.filterByCategory(category);
-                      }
+                      _onCategorySelected(category);
                     },
                   ),
                 );
@@ -116,6 +145,7 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           ),
           const SizedBox(height: 8),
+          // Search Results
           Expanded(
             child: eventsProvider.isLoading
                 ? const Center(child: CircularProgressIndicator())
