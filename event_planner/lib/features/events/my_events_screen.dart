@@ -120,6 +120,21 @@ class _RegisteredEventCard extends StatelessWidget {
     return colors[category] ?? Colors.grey;
   }
 
+  IconData _getCategoryIcon(String category) {
+    final icons = {
+      'music': Icons.music_note,
+      'sports': Icons.sports_baseball,
+      'arts': Icons.palette,
+      'food': Icons.restaurant,
+      'technology': Icons.computer,
+      'business': Icons.business,
+      'social': Icons.groups,
+      'outdoor': Icons.park,
+      'other': Icons.event,
+    };
+    return icons[category] ?? Icons.event;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -309,20 +324,5 @@ class _RegisteredEventCard extends StatelessWidget {
         );
       }
     }
-  }
-
-  IconData _getCategoryIcon(String category) {
-    final icons = {
-      'music': Icons.music_note,
-      'sports': Icons.sports_baseball,
-      'arts': Icons.palette,
-      'food': Icons.restaurant,
-      'technology': Icons.computer,
-      'business': Icons.business,
-      'social': Icons.groups,
-      'outdoor': Icons.park,
-      'other': Icons.event,
-    };
-    return icons[category] ?? Icons.event;
   }
 }

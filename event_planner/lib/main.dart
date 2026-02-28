@@ -17,6 +17,7 @@ import 'features/auth/landing_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/events/create_events_screen.dart';
 import 'features/events/event_details_screen.dart';
+import 'features/events/event_planning_screen.dart';
 import 'features/profile/profile_screen.dart';
 
 void main() async {
@@ -137,6 +138,14 @@ class EventPlannerApp extends StatelessWidget {
         builder: (context, state) {
           final eventId = state.pathParameters['id']!;
           return EventDetailsScreen(eventId: eventId);
+        },
+      ),
+      GoRoute(
+        path: '/events/:id/plan',
+        name: 'event-planning',
+        builder: (context, state) {
+          final eventId = state.pathParameters['id']!;
+          return EventPlanningScreen(eventId: eventId);
         },
       ),
       GoRoute(

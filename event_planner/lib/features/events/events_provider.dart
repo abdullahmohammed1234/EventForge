@@ -71,6 +71,7 @@ class Event {
   final DateTime createdAt;
   final List<SubEvent> subEvents;
   final bool isUserRegistered;
+  final String? registrationId; // Unique QR code ID
 
   Event({
     required this.id,
@@ -90,6 +91,7 @@ class Event {
     required this.createdAt,
     this.subEvents = const [],
     this.isUserRegistered = false,
+    this.registrationId,
   });
 
   factory Event.fromJson(Map<String, dynamic> json) {
@@ -118,6 +120,7 @@ class Event {
       createdAt: DateTime.parse(json['createdAt']),
       subEvents: subEventsList,
       isUserRegistered: json['isUserRegistered'] ?? false,
+      registrationId: json['registrationId'],
     );
   }
 
@@ -139,6 +142,7 @@ class Event {
       'createdAt': createdAt.toIso8601String(),
       'subEvents': subEvents.map((e) => e.toJson()).toList(),
       'isUserRegistered': isUserRegistered,
+      'registrationId': registrationId,
     };
   }
 
@@ -160,6 +164,7 @@ class Event {
     DateTime? createdAt,
     List<SubEvent>? subEvents,
     bool? isUserRegistered,
+    String? registrationId,
   }) {
     return Event(
       id: id ?? this.id,
@@ -179,6 +184,7 @@ class Event {
       createdAt: createdAt ?? this.createdAt,
       subEvents: subEvents ?? this.subEvents,
       isUserRegistered: isUserRegistered ?? this.isUserRegistered,
+      registrationId: registrationId ?? this.registrationId,
     );
   }
 }
@@ -207,7 +213,12 @@ class EventsProvider with ChangeNotifier {
   }
 
   List<Event> get events => _events;
-  List<Event> get registeredEvents => _registeredEvents;
+  List<Event> get registeredEvents {
+    // Sort events by date in ascending order (soonest first)
+    final sortedEvents = List<Event>.from(_registeredEvents);
+    sortedEvents.sort((a, b) => a.startTime.compareTo(b.startTime));
+    return sortedEvents;
+  }
   Event? get currentEvent => _currentEvent;
   bool get isLoading => _isLoading;
   bool get isLoadingMore => _isLoadingMore;
