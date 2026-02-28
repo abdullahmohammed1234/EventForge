@@ -31,6 +31,8 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Clear any previous search state and fetch fresh events
+      context.read<EventsProvider>().clearSearchState();
       context.read<EventsProvider>().fetchEvents(refresh: true);
     });
   }

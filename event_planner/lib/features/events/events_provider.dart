@@ -502,6 +502,13 @@ class EventsProvider with ChangeNotifier {
     await fetchRegisteredEvents(refresh: true);
   }
 
+  // Clear search state - should be called when leaving search screen
+  void clearSearchState() {
+    _currentSearchQuery = null;
+    _currentCategory = null;
+    notifyListeners();
+  }
+
   // Get a single event by ID
   Future<Event?> getEventById(String eventId) async {
     _isLoading = true;

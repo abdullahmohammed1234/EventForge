@@ -18,6 +18,8 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Clear any search state from previous searches before fetching events
+      context.read<EventsProvider>().clearSearchState();
       context.read<EventsProvider>().fetchEvents(refresh: true);
     });
     _scrollController.addListener(_scrollListener);
@@ -56,7 +58,9 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          await eventsProvider.fetchEvents(refresh: true);
+          // Clear search state on refresh to get all events
+          context.read<EventsProvider>().clearSearchState();
+          await context.read<EventsProvider>().fetchEvents(refresh: true);
         },
         child: eventsProvider.isLoading && eventsProvider.events.isEmpty
             ? const Center(child: CircularProgressIndicator())
