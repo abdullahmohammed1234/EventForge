@@ -41,14 +41,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
 
       final authProvider = context.read<AuthProvider>();
-      
+
       final success = await authProvider.register(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         displayName: _displayNameController.text.trim().isEmpty
             ? null
             : _displayNameController.text.trim(),
-        city: _cityController.text.trim().isEmpty ? null : _cityController.text.trim(),
+        city: _cityController.text.trim().isEmpty
+            ? null
+            : _cityController.text.trim(),
       );
 
       if (success && mounted) {
