@@ -26,7 +26,12 @@ class AppConfig {
     // Fallback if .env is not configured
     // For Android emulator: 10.0.2.2 is the emulator's alias to the host's localhost
     // For iOS simulator: localhost works
+    // For USB debugging with flutter run: localhost works (adb reverse is auto-configured)
     if (kDebugMode) {
+      // Use localhost for debug builds - works with:
+      // - Android emulator (10.0.2.2 or localhost)
+      // - iOS simulator (localhost)
+      // - USB device when running via 'flutter run' (adb reverse auto-configured)
       return 'http://localhost:3000/api';
     }
     

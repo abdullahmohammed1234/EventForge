@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-import 'core/config/app_config.dart';
 import 'core/api/auth_service.dart';
 import 'core/api/event_service.dart';
 import 'core/utils/storage_helper.dart';
@@ -16,13 +16,20 @@ import 'features/auth/splash_screen.dart';
 import 'features/auth/landing_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/events/create_events_screen.dart';
-import 'features/events/event_details_screen.dart';
+import 'features/events/event_detail_page.dart';
 import 'features/events/event_planning_screen.dart';
+import 'features/events/my_events_screen.dart';
+import 'features/search/search_screen.dart';
 import 'features/profile/profile_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Set preferred orientations to portrait only
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
   // Load environment variables from .env file
   await dotenv.load(fileName: ".env");
   // Initialize secure storage
@@ -137,7 +144,7 @@ class EventPlannerApp extends StatelessWidget {
         name: 'event-details',
         builder: (context, state) {
           final eventId = state.pathParameters['id']!;
-          return EventDetailsScreen(eventId: eventId);
+          return EventDetailPage(eventId: eventId);
         },
       ),
       GoRoute(
@@ -149,9 +156,27 @@ class EventPlannerApp extends StatelessWidget {
         },
       ),
       GoRoute(
+        path: '/events/:id/ticket',
+        name: 'ticket',
+        builder: (context, state) {
+          final eventId = state.pathParameters['id']!;
+          return EventPlanningScreen(eventId: eventId, showTicket: true);
+        },
+      ),
+      GoRoute(
+        path: '/search',
+        name: 'search',
+        builder: (context, state) => const SearchScreen(),
+      ),
+      GoRoute(
+        path: '/my-events',
+        name: 'my-events',
+        builder: (context, state) => const MyEventsScreen(),
+      ),
+      GoRoute(
         path: '/profile',
         name: 'profile',
-        builder: (context, state) => const HomeScreen(),
+        builder: (context, state) => const ProfileScreen(),
       ),
     ],
     redirect: (context, state) {
