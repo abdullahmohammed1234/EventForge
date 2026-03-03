@@ -602,6 +602,8 @@ class EventsProvider with ChangeNotifier {
             currentAttendees: _events[eventIndex].currentAttendees + 1,
           );
         }
+        // Refresh registered events to ensure My Events page is updated
+        await fetchRegisteredEvents(refresh: true);
         _isRegistering = false;
         notifyListeners();
         return true;
@@ -658,6 +660,8 @@ class EventsProvider with ChangeNotifier {
         }
         // Remove from registered events list
         _registeredEvents.removeWhere((e) => e.id == eventId);
+        // Refresh registered events to ensure My Events page is updated
+        await fetchRegisteredEvents(refresh: true);
         _isRegistering = false;
         notifyListeners();
         return true;

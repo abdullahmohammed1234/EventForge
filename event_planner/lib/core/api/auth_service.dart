@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 
@@ -6,6 +7,10 @@ class AuthService {
   final String baseUrl = AppConfig.apiBaseUrl;
 
   final http.Client _client = http.Client();
+
+  AuthService() {
+    debugPrint('AuthService initialized with baseUrl: $baseUrl');
+  }
 
   Future<http.Response> register({
     required String email,

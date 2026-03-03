@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../core/api/auth_service.dart';
+import '../../core/config/app_config.dart';
 import '../../core/utils/storage_helper.dart';
 
 class User {
@@ -56,6 +57,7 @@ class AuthProvider with ChangeNotifier {
     required this.storage,
     required this.storageHelper,
   }) {
+    debugPrint('AuthProvider initialized');
     _checkAuthStatus();
   }
 
@@ -94,7 +96,9 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      debugPrint('Attempting login to: ${authService.baseUrl}${Endpoints.login}');
       final response = await authService.login(email: email, password: password);
+      debugPrint('Login response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -115,6 +119,7 @@ class AuthProvider with ChangeNotifier {
         return false;
       }
     } catch (e) {
+      debugPrint('Login error: $e');
       _error = e.toString().replaceAll('Exception: ', '');
       _isLoading = false;
       notifyListeners();
