@@ -19,7 +19,11 @@ class AppConfig {
     // Create a .env file in the project root with: LOCAL_IP=192.168.x.x
     final String? localIP = dotenv.env['LOCAL_IP'];
     
+    // Debug: Print the loaded IP
+    debugPrint('DEBUG: LOCAL_IP from .env = $localIP');
+    
     if (localIP != null && localIP.isNotEmpty) {
+      debugPrint('DEBUG: Using IP-based URL: http://$localIP:3000/api');
       return 'http://$localIP:3000/api';
     }
     
@@ -28,6 +32,7 @@ class AppConfig {
     // For iOS simulator: localhost works
     // For USB debugging with flutter run: localhost works (adb reverse is auto-configured)
     if (kDebugMode) {
+      debugPrint('DEBUG: Using localhost (debug mode)');
       // Use localhost for debug builds - works with:
       // - Android emulator (10.0.2.2 or localhost)
       // - iOS simulator (localhost)
@@ -35,6 +40,7 @@ class AppConfig {
       return 'http://localhost:3000/api';
     }
     
+    debugPrint('DEBUG: Using production URL');
     // Production URL - update this to your deployed backend URL
     return 'https://your-production-api.com/api';
   }

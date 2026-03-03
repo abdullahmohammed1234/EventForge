@@ -4,6 +4,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 import 'core/api/auth_service.dart';
 import 'core/api/event_service.dart';
@@ -30,8 +32,26 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+  
   // Load environment variables from .env file
-  await dotenv.load(fileName: ".env");
+  try {
+    // Try to load from current directory first (for development)
+    await dotenv.load(fileName: '.env');
+  } catch (e) {
+    // If that fails, try to load from the application documents directory
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final envFile = File('${directory.path}/.env');
+      if (await envFile.exists()) {
+        await dotenv.load(fileName: envFile.path);
+      }
+    } catch (_) {
+      // Fall back to empty env if all else fails
+      debugPrint('Warning: Could not load .env file');
+    }
+  }
+  
+  debugPrint('Environment loaded. LOCAL_IP = ${dotenv.env['LOCAL_IP']}');
   // Initialize secure storage
   final storage = FlutterSecureStorage();
   
