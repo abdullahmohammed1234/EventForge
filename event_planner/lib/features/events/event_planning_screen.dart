@@ -10,8 +10,9 @@ import 'events_provider.dart';
 
 class EventPlanningScreen extends StatefulWidget {
   final String eventId;
+  final bool showTicket;
 
-  const EventPlanningScreen({super.key, required this.eventId});
+  const EventPlanningScreen({super.key, required this.eventId, this.showTicket = false});
 
   @override
   State<EventPlanningScreen> createState() => _EventPlanningScreenState();
