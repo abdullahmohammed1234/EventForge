@@ -21,7 +21,10 @@ class OverlappingAvatars extends StatelessWidget {
   });
 
   double _calculateTotalWidth() {
-    final visibleCount = avatarUrls.length.clamp(0, maxVisible);
+    // If no avatar URLs but we have attendees, we show placeholders
+    final visibleCount = avatarUrls.isEmpty && totalCount > 0 
+        ? totalCount.clamp(0, maxVisible) 
+        : avatarUrls.length.clamp(0, maxVisible);
     final totalAvatars = visibleCount + (totalCount > maxVisible ? 1 : 0);
     if (totalAvatars == 0) return avatarSize;
     return (totalAvatars - 1) * overlapOffset + avatarSize;
@@ -32,13 +35,45 @@ class OverlappingAvatars extends StatelessWidget {
     final visibleAvatars = avatarUrls.take(maxVisible).toList();
     final remainingCount = totalCount > maxVisible ? totalCount - maxVisible : 0;
 
+    // If no avatar URLs but we have attendees, show placeholder avatars
+    final showPlaceholders = visibleAvatars.isEmpty && totalCount > 0;
+
     return SizedBox(
       height: avatarSize,
       width: _calculateTotalWidth(),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          ...visibleAvatars.asMap().entries.map((entry) {
+          if (showPlaceholders)
+            // Show placeholder circles when no real avatars available
+            ...List.generate(totalCount.clamp(0, maxVisible), (index) {
+              return Positioned(
+                left: index * overlapOffset,
+                child: Container(
+                  width: avatarSize,
+                  height: avatarSize,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: borderColor ?? Colors.white,
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: _buildPlaceholder(),
+                  ),
+                ),
+              );
+            }).toList()
+          else
+            ...visibleAvatars.asMap().entries.map((entry) {
             final index = entry.key;
             final url = entry.value;
             

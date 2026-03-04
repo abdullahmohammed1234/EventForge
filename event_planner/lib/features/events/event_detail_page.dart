@@ -701,14 +701,14 @@ Join me at this event!
           decoration: BoxDecoration(
             color: theme.dominantColor,
             borderRadius: BorderRadius.circular(24),
-            image: organizerAvatar != null
+            image: organizerAvatar != null && organizerAvatar.isNotEmpty
                 ? DecorationImage(
                     image: CachedNetworkImageProvider(organizerAvatar),
                     fit: BoxFit.cover,
                   )
                 : null,
           ),
-          child: organizerAvatar == null
+          child: organizerAvatar == null || organizerAvatar.isEmpty
               ? Center(
                   child: Text(
                     organizerName.isNotEmpty ? organizerName[0].toUpperCase() : 'O',
@@ -839,26 +839,24 @@ Join me at this event!
 
   /// Build attendees section
   Widget _buildAttendeesSection(Event event, DynamicThemeController theme) {
-    // Get attendee avatars from event.attendees or use placeholders
+    // Get attendee avatars from event.attendees
     final attendeeAvatars = <String>[];
     if (event.attendees.isNotEmpty) {
       for (var i = 0; i < event.attendees.length && i < 5; i++) {
-        if (event.attendees[i].avatarUrl != null) {
+        if (event.attendees[i].avatarUrl != null && event.attendees[i].avatarUrl!.isNotEmpty) {
           attendeeAvatars.add(event.attendees[i].avatarUrl!);
         }
-      }
-    }
-    
-    // Use placeholders if no real avatars
-    if (attendeeAvatars.isEmpty) {
-      for (var i = 0; i < 4; i++) {
-        attendeeAvatars.add('https://i.pravatar.cc/150?img=${i + 10}');
       }
     }
     
     final totalCount = event.attendeeCount;
     final displayCount = totalCount > 0 ? totalCount : event.currentAttendees;
     final moreCount = displayCount > 5 ? displayCount - 5 : 0;
+
+    // Don't show section if no attendees
+    if (displayCount == 0) {
+      return const SizedBox.shrink();
+    }
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -871,6 +869,7 @@ Join me at this event!
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
+                color: Colors.black,
               ),
             ),
             const SizedBox(height: 8),
