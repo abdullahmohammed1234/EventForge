@@ -248,4 +248,11 @@ router.put(
  */
 router.delete('/:id', auth, asyncWrapper(eventsController.deleteEvent));
 
+/**
+ * @desc    Upload event cover image
+ * @route   POST /api/events/upload-cover
+ * @access  Private
+ */
+router.post('/upload-cover', auth, asyncWrapper(eventsController.uploadEventCover));
+
 module.exports = router;

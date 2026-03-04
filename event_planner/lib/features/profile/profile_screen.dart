@@ -1,10 +1,78 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../auth/auth_provider.dart';
+import '../../core/config/app_config.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final ImagePicker _picker = ImagePicker();
+  bool _isUploading = false;
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+
+      if (image != null && mounted) {
+        _uploadImage(File(image.path));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking image: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _uploadImage(File imageFile) async {
+    setState(() {
+      _isUploading = true;
+    });
+
+    final authProvider = context.read<AuthProvider>();
+    final success = await authProvider.uploadAvatar(imageFile);
+
+    if (mounted) {
+      setState(() {
+        _isUploading = false;
+      });
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile picture updated!')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(authProvider.error ?? 'Upload failed')),
+        );
+      }
+    }
+  }
+
+  String _getFullAvatarUrl(String? avatarUrl) {
+    if (avatarUrl == null || avatarUrl.isEmpty) {
+      return '';
+    }
+    if (avatarUrl.startsWith('http')) {
+      return avatarUrl;
+    }
+    return '${AppConfig.apiBaseUrl.replaceAll('/api', '')}$avatarUrl';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,13 +88,75 @@ class ProfileScreen extends StatelessWidget {
           padding: const EdgeInsets.all(24),
           child: Column(
             children: [
-              const CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.blue,
-                child: Icon(
-                  Icons.person,
-                  size: 60,
-                  color: Colors.white,
+              Stack(
+                children: [
+                  GestureDetector(
+                    onTap: _isUploading ? null : _pickImage,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: CircleAvatar(
+                        radius: 50,
+                        backgroundColor: Colors.blue,
+                        backgroundImage: user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty
+                            ? CachedNetworkImageProvider(_getFullAvatarUrl(user.avatarUrl))
+                            : null,
+                        child: user?.avatarUrl == null || user!.avatarUrl!.isEmpty
+                            ? const Icon(
+                                Icons.person,
+                                size: 60,
+                                color: Colors.white,
+                              )
+                            : null,
+                      ),
+                    ),
+                  ),
+                  if (_isUploading)
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.black.withOpacity(0.3),
+                        ),
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.blue,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.camera_alt,
+                        size: 20,
+                        color: Colors.white.withOpacity(0.9),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _isUploading ? 'Uploading...' : 'Tap to change photo',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[500],
                 ),
               ),
               const SizedBox(height: 16),

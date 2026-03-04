@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'dart:io';
 import '../config/app_config.dart';
 
 class AuthService {
@@ -81,6 +82,29 @@ class AuthService {
       return response;
     } catch (e) {
       throw Exception('Connection failed: $e');
+    }
+  }
+
+  Future<http.Response> uploadAvatar({
+    required String token,
+    required File imageFile,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl${Endpoints.uploadAvatar}');
+      final request = http.MultipartRequest('POST', uri);
+      
+      request.headers.addAll({
+        'Authorization': 'Bearer $token',
+      });
+      
+      request.files.add(
+        await http.MultipartFile.fromPath('image', imageFile.path),
+      );
+
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 30));
+      return await http.Response.fromStream(streamedResponse);
+    } catch (e) {
+      throw Exception('Upload failed: $e');
     }
   }
 

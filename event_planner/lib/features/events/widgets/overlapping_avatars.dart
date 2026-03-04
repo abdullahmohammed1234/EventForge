@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/config/app_config.dart';
 
 /// Overlapping avatars widget for displaying event attendees
 /// Uses negative horizontal offsets to create overlapping effect
@@ -138,18 +140,19 @@ class OverlappingAvatars extends StatelessWidget {
   }
 
   Widget _buildAvatarImage(String url) {
+    // Convert relative URLs to absolute URLs
+    String fullUrl = url;
+    if (!url.startsWith('data:image') && !url.startsWith('http')) {
+      fullUrl = '${AppConfig.apiBaseUrl.replaceAll('/api', '')}$url';
+    }
+    
     // Check if it's a valid URL or base64 image
-    if (url.startsWith('data:image') || url.startsWith('http')) {
-      return Image.network(
-        url,
+    if (url.startsWith('data:image') || url.startsWith('http') || fullUrl.startsWith('http')) {
+      return CachedNetworkImage(
+        imageUrl: fullUrl,
         fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return _buildPlaceholder();
-        },
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return _buildPlaceholder();
-        },
+        placeholder: (context, url) => _buildPlaceholder(),
+        errorWidget: (context, url, error) => _buildPlaceholder(),
       );
     }
     return _buildPlaceholder();

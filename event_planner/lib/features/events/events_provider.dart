@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -732,6 +733,7 @@ class EventsProvider with ChangeNotifier {
     DateTime? endTime,
     int? maxAttendees,
     List<String>? tags,
+    String? coverImageUrl,
   }) async {
     _isLoading = true;
     _error = null;
@@ -758,6 +760,7 @@ class EventsProvider with ChangeNotifier {
         endTime: endTime?.toIso8601String(),
         maxAttendees: maxAttendees,
         tags: tags,
+        coverImageUrl: coverImageUrl,
         token: token,
       );
 
@@ -786,6 +789,33 @@ class EventsProvider with ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  Future<String?> uploadEventCover(File imageFile) async {
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        _error = 'Not authenticated';
+        return null;
+      }
+
+      final response = await eventService.uploadEventCover(
+        token: token,
+        imageFile: imageFile,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['data']['coverImageUrl'];
+      } else {
+        final data = jsonDecode(response.body);
+        _error = data['message'] ?? 'Upload failed';
+        return null;
+      }
+    } catch (e) {
+      _error = 'Network error: ${e.toString()}';
+      return null;
+    }
   }
 
   // Initialize/refresh data after login

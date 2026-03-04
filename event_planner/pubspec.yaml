@@ -19,6 +19,9 @@ dependencies:
   http: ^1.1.0
   dio: ^5.4.0
 
+  # Image Picker
+  image_picker: ^1.0.7
+
   # Secure Storage for JWT
   flutter_secure_storage: ^9.0.0
 

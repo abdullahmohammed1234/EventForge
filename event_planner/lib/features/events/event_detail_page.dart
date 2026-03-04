@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/config/app_config.dart';
 import 'events_provider.dart';
 import 'widgets/dynamic_theme_controller.dart';
 import 'widgets/category_pill.dart';
@@ -299,8 +300,13 @@ Join me at this event!
   /// Build hero image section
   Widget _buildHeroImage(Event event) {
     if (event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty) {
+      // Convert relative URL to absolute URL
+      String coverImageUrl = event.coverImageUrl!;
+      if (!coverImageUrl.startsWith('data:image') && !coverImageUrl.startsWith('http')) {
+        coverImageUrl = '${AppConfig.apiBaseUrl.replaceAll('/api', '')}$coverImageUrl';
+      }
       return CachedNetworkImage(
-        imageUrl: event.coverImageUrl!,
+        imageUrl: coverImageUrl,
         fit: BoxFit.cover,
         placeholder: (context, url) => Container(
           decoration: BoxDecoration(
@@ -686,6 +692,12 @@ Join me at this event!
     final organizerType = event.organizer?.type;
     final organizerAvatar = event.organizer?.avatarUrl;
     
+    // Convert relative URL to absolute URL
+    String organizerAvatarUrl = organizerAvatar ?? '';
+    if (organizerAvatar != null && !organizerAvatar.startsWith('data:image') && !organizerAvatar.startsWith('http')) {
+      organizerAvatarUrl = '${AppConfig.apiBaseUrl.replaceAll('/api', '')}$organizerAvatar';
+    }
+    
     return Row(
       children: [
         Container(
@@ -696,7 +708,7 @@ Join me at this event!
             borderRadius: BorderRadius.circular(24),
             image: organizerAvatar != null && organizerAvatar.isNotEmpty
                 ? DecorationImage(
-                    image: CachedNetworkImageProvider(organizerAvatar),
+                    image: CachedNetworkImageProvider(organizerAvatarUrl),
                     fit: BoxFit.cover,
                   )
                 : null,

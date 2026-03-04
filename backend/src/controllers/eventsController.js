@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const Event = require('../models/Event');
 const asyncWrapper = require('../utils/asyncWrapper');
 const { APIError } = require('../middleware/errorHandler');
+const { handleUpload } = require('../utils/upload');
 
 /**
  * @desc    Get all events (with pagination and filters)
@@ -643,4 +644,48 @@ module.exports = {
   saveEvent,
   unsaveEvent,
   getSavedEvents,
+};
+
+/**
+ * @desc    Upload event cover image
+ * @route   POST /api/events/upload-cover
+ * @access  Private
+ */
+uploadEventCover = asyncWrapper(async (req, res, next) => {
+  handleUpload(req, res, async (err) => {
+    if (err) {
+      return next(err);
+    }
+
+    if (!req.file) {
+      return next(new APIError('No file uploaded', 400));
+    }
+
+    // Return the image URL
+    const imageUrl = `/uploads/${req.file.filename}`;
+
+    res.json({
+      success: true,
+      message: 'Event cover image uploaded successfully',
+      data: {
+        coverImageUrl: imageUrl,
+      },
+    });
+  });
+});
+
+module.exports = {
+  getEvents,
+  getEvent,
+  createEvent,
+  updateEvent,
+  deleteEvent,
+  getMyEvents,
+  registerForEvent,
+  unregisterFromEvent,
+  getRegisteredEvents,
+  saveEvent,
+  unsaveEvent,
+  getSavedEvents,
+  uploadEventCover,
 };

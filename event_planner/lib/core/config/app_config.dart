@@ -59,6 +59,8 @@ class Endpoints {
   static const String myEvents = '/events/my-events';
   static const String registeredEvents = '/events/registered';
   static const String savedEvents = '/events/saved';
+  static const String uploadAvatar = '/auth/upload-avatar';
+  static const String uploadEventCover = '/events/upload-cover';
 }
 
 // Helper method to get event registration endpoint
