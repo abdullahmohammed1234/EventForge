@@ -243,10 +243,6 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
                       _buildQRCodeSection(event),
                       const SizedBox(height: 24),
 
-                      // Google Maps Section
-                      _buildMapsSection(event),
-                      const SizedBox(height: 24),
-
                       // Transportation Section
                       _buildPlanningSection(
                         title: 'Transportation',

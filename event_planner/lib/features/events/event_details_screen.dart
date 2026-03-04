@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'events_provider.dart';
 import '../auth/auth_provider.dart';
 
@@ -61,6 +62,50 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     return icons[category.toLowerCase()] ?? Icons.event;
   }
 
+  Future<void> _openGoogleMaps(Event event) async {
+    String query;
+    if (event.latitude != null && event.longitude != null &&
+        event.latitude != 0 && event.longitude != 0) {
+      query = '${event.latitude},${event.longitude}';
+    } else {
+      // Use address or city for geocoding
+      final locationString = event.address ?? event.city;
+      if (locationString.isNotEmpty) {
+        query = Uri.encodeComponent(locationString);
+      } else {
+        return; // No location available
+      }
+    }
+    
+    final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$query');
+    
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  Future<void> _getPublicTransit(Event event) async {
+    String query;
+    if (event.latitude != null && event.longitude != null &&
+        event.latitude != 0 && event.longitude != 0) {
+      query = '${event.latitude},${event.longitude}';
+    } else {
+      // Use address or city for geocoding
+      final locationString = event.address ?? event.city;
+      if (locationString.isNotEmpty) {
+        query = Uri.encodeComponent(locationString);
+      } else {
+        return; // No location available
+      }
+    }
+    
+    final url = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$query&travelmode=transit');
+    
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final eventsProvider = context.watch<EventsProvider>();
@@ -117,6 +162,26 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                               title: event.city,
                               subtitle: event.address ?? 'Address not specified',
                               themeColor: themeColor,
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () => _openGoogleMaps(event),
+                                    icon: const Icon(Icons.map),
+                                    label: const Text('Open Maps'),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () => _getPublicTransit(event),
+                                    icon: const Icon(Icons.directions_transit),
+                                    label: const Text('Public Transit'),
+                                  ),
+                                ),
+                              ],
                             ),
                             
                             const SizedBox(height: 20),
