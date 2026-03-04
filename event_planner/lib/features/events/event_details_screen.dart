@@ -236,7 +236,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   ),
                 ),
       bottomNavigationBar: event != null
-          ? _buildBottomBar(event, eventsProvider, authProvider, themeColor)
+          ? _buildBottomBar(event, eventsProvider, themeColor)
           : null,
     );
   }
@@ -578,9 +578,10 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   Widget _buildBottomBar(
     Event event,
     EventsProvider eventsProvider,
-    AuthProvider authProvider,
     Color themeColor,
   ) {
+    // Get authProvider from context for registration button
+    final authProvider = context.watch<AuthProvider>();
     final isRegistered = event.isUserRegistered;
     final hasRegistrationId = event.registrationId != null && event.registrationId!.isNotEmpty;
 
