@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'dart:io';
 import '../config/app_config.dart';
 
 class EventService {
@@ -55,6 +56,7 @@ class EventService {
     String? endTime,
     int? maxAttendees,
     List<String>? tags,
+    String? coverImageUrl,
     required String token,
   }) async {
     final body = <String, dynamic>{
@@ -71,6 +73,7 @@ class EventService {
     if (endTime != null) body['endTime'] = endTime;
     if (maxAttendees != null) body['maxAttendees'] = maxAttendees;
     if (tags != null && tags.isNotEmpty) body['tags'] = tags;
+    if (coverImageUrl != null) body['coverImageUrl'] = coverImageUrl;
 
     return _client.post(
       Uri.parse('$baseUrl${Endpoints.events}'),
@@ -222,6 +225,29 @@ class EventService {
     }
 
     return _client.get(uri, headers: headers).timeout(const Duration(seconds: 10));
+  }
+
+  Future<http.Response> uploadEventCover({
+    required String token,
+    required File imageFile,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl${Endpoints.uploadEventCover}');
+      final request = http.MultipartRequest('POST', uri);
+      
+      request.headers.addAll({
+        'Authorization': 'Bearer $token',
+      });
+      
+      request.files.add(
+        await http.MultipartFile.fromPath('image', imageFile.path),
+      );
+
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 30));
+      return await http.Response.fromStream(streamedResponse);
+    } catch (e) {
+      throw Exception('Upload failed: $e');
+    }
   }
 
   void dispose() {

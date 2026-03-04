@@ -3,6 +3,7 @@ const User = require('../models/User');
 const { generateToken, auth } = require('../middleware/auth');
 const asyncWrapper = require('../utils/asyncWrapper');
 const { APIError } = require('../middleware/errorHandler');
+const path = require('path');
 
 /**
  * @desc    Register a new user
@@ -32,6 +33,7 @@ const register = asyncWrapper(async (req, res, next) => {
     passwordHash: password,
     displayName: displayName || email.split('@')[0],
     city: city || '',
+    avatarUrl: '',
   });
 
   await user.save();
@@ -103,6 +105,7 @@ const login = asyncWrapper(async (req, res, next) => {
         email: user.email,
         displayName: user.displayName,
         city: user.city,
+        avatarUrl: user.avatarUrl,
         createdAt: user.createdAt,
       },
       token,
@@ -129,6 +132,7 @@ const getMe = asyncWrapper(async (req, res, next) => {
         email: user.email,
         displayName: user.displayName,
         city: user.city,
+        avatarUrl: user.avatarUrl,
         createdAt: user.createdAt,
       },
     },
@@ -187,9 +191,49 @@ const updateProfile = asyncWrapper(async (req, res, next) => {
         email: user.email,
         displayName: user.displayName,
         city: user.city,
+        avatarUrl: user.avatarUrl,
         updatedAt: user.updatedAt,
       },
     },
+  });
+});
+
+const { handleUpload } = require('../utils/upload');
+
+/**
+ * @desc    Upload profile picture
+ * @route   POST /api/auth/upload-avatar
+ * @access  Private
+ */
+const uploadAvatar = asyncWrapper(async (req, res, next) => {
+  handleUpload(req, res, async (err) => {
+    if (err) {
+      return next(err);
+    }
+
+    if (!req.file) {
+      return next(new APIError('No file uploaded', 400));
+    }
+
+    // Update user's avatar URL
+    const avatarUrl = `/uploads/${req.file.filename}`;
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { avatarUrl },
+      { new: true }
+    );
+
+    if (!user) {
+      return next(new APIError('User not found', 404));
+    }
+
+    res.json({
+      success: true,
+      message: 'Profile picture uploaded successfully',
+      data: {
+        avatarUrl: user.avatarUrl,
+      },
+    });
   });
 });
 
@@ -199,4 +243,5 @@ module.exports = {
   getMe,
   logout,
   updateProfile,
+  uploadAvatar,
 };

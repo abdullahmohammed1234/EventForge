@@ -1,8 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
 import 'events_provider.dart';
+import '../../core/config/app_config.dart';
 
 class CreateEventScreen extends StatefulWidget {
   const CreateEventScreen({super.key});
@@ -19,6 +22,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   final _addressController = TextEditingController();
   final _maxAttendeesController = TextEditingController();
   final _tagsController = TextEditingController();
+
+  final ImagePicker _picker = ImagePicker();
+  File? _coverImage;
+  String? _coverImageUrl;
+  bool _isUploadingImage = false;
 
   String _selectedCategory = 'other';
   DateTime? _startDateTime;
@@ -45,6 +53,54 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     _maxAttendeesController.dispose();
     _tagsController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickCoverImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1200,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        setState(() {
+          _coverImage = File(image.path);
+          _isUploadingImage = true;
+        });
+
+        // Upload the image first
+        final eventsProvider = context.read<EventsProvider>();
+        final uploadedUrl = await eventsProvider.uploadEventCover(_coverImage!);
+
+        setState(() {
+          _isUploadingImage = false;
+          if (uploadedUrl != null) {
+            _coverImageUrl = uploadedUrl;
+          }
+        });
+
+        if (mounted && uploadedUrl != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Cover image uploaded!')),
+          );
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(eventsProvider.error ?? 'Failed to upload image')),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _isUploadingImage = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking image: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _selectStartDateTime() async {
@@ -133,6 +189,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         tags: _tagsController.text.isEmpty
             ? []
             : _tagsController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
+        coverImageUrl: _coverImageUrl,
       );
 
       if (success && mounted) {
@@ -146,6 +203,16 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         );
       }
     }
+  }
+
+  String _getFullImageUrl(String? imageUrl) {
+    if (imageUrl == null || imageUrl.isEmpty) {
+      return '';
+    }
+    if (imageUrl.startsWith('http')) {
+      return imageUrl;
+    }
+    return '${AppConfig.apiBaseUrl.replaceAll('/api', '')}$imageUrl';
   }
 
   @override
@@ -167,11 +234,64 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Cover Image Section
+              GestureDetector(
+                onTap: _isUploadingImage ? null : _pickCoverImage,
+                child: Container(
+                  height: 180,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: _coverImage != null
+                      ? Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.file(
+                                _coverImage!,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            if (_isUploadingImage)
+                              Container(
+                                color: Colors.black.withOpacity(0.3),
+                                child: const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              ),
+                          ],
+                        )
+                      : _isUploadingImage
+                          ? const Center(child: CircularProgressIndicator())
+                          : Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.add_photo_alternate,
+                                  size: 48,
+                                  color: Colors.grey[400],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Add Cover Image',
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                ),
+              ),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _titleController,
                 decoration: const InputDecoration(
                   labelText: 'Event Title *',
-                  prefixIcon: const Icon(Icons.text_fields),
+                  prefixIcon: Icon(Icons.text_fields),
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
@@ -186,7 +306,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 value: _selectedCategory,
                 decoration: const InputDecoration(
                   labelText: 'Category *',
-                  prefixIcon: const Icon(Icons.category),
+                  prefixIcon: Icon(Icons.category),
                   border: OutlineInputBorder(),
                 ),
                 items: _categories.map((category) {
@@ -206,7 +326,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 controller: _cityController,
                 decoration: const InputDecoration(
                   labelText: 'City *',
-                  prefixIcon: const Icon(Icons.location_city),
+                  prefixIcon: Icon(Icons.location_city),
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
@@ -221,7 +341,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 controller: _addressController,
                 decoration: const InputDecoration(
                   labelText: 'Address (optional)',
-                  prefixIcon: const Icon(Icons.location_on),
+                  prefixIcon: Icon(Icons.location_on),
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -231,7 +351,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 child: InputDecorator(
                   decoration: const InputDecoration(
                     labelText: 'Start Date & Time *',
-                    prefixIcon: const Icon(Icons.calendar_today),
+                    prefixIcon: Icon(Icons.calendar_today),
                     border: OutlineInputBorder(),
                   ),
                   child: Text(
@@ -252,7 +372,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 child: InputDecorator(
                   decoration: const InputDecoration(
                     labelText: 'End Date & Time (optional)',
-                    prefixIcon: const Icon(Icons.calendar_today),
+                    prefixIcon: Icon(Icons.calendar_today),
                     border: OutlineInputBorder(),
                   ),
                   child: Text(
@@ -283,7 +403,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
                   labelText: 'Max Attendees (optional)',
-                  prefixIcon: const Icon(Icons.people),
+                  prefixIcon: Icon(Icons.people),
                   border: OutlineInputBorder(),
                 ),
               ),

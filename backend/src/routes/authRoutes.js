@@ -3,6 +3,7 @@ const { body } = require('express-validator');
 const authController = require('../controllers/authController');
 const { auth } = require('../middleware/auth');
 const asyncWrapper = require('../utils/asyncWrapper');
+const { handleUpload } = require('../utils/upload');
 
 const router = express.Router();
 
@@ -90,5 +91,12 @@ router.put(
   ],
   asyncWrapper(authController.updateProfile)
 );
+
+/**
+ * @desc    Upload profile picture
+ * @route   POST /api/auth/upload-avatar
+ * @access  Private
+ */
+router.post('/upload-avatar', auth, asyncWrapper(authController.uploadAvatar));
 
 module.exports = router;
