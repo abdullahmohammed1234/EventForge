@@ -278,7 +278,7 @@ Join me at this event!
             Positioned(
               left: 16,
               right: 16,
-              bottom: 24, // Raised up from 16 to give more clearance
+              bottom: 50,
               child: BottomFloatingNav(
                 currentIndex: _currentNavIndex,
                 onTap: (index) {
