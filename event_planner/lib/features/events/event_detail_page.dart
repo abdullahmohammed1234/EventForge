@@ -132,9 +132,20 @@ class _EventDetailPageState extends State<EventDetailPage>
     
     final event = eventsProvider.currentEvent;
     if (event != null) {
-      // Extract colors based on category
-      final categoryColor = CategoryImageHelper.getCategoryAccent(event.category);
-      _themeController.extractColorsFromGradient(categoryColor);
+      // Check if event has an image - use image for theme if available
+      if (event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty) {
+        // Build the full URL if needed
+        String coverImageUrl = event.coverImageUrl!;
+        if (!coverImageUrl.startsWith('data:image') && !coverImageUrl.startsWith('http')) {
+          coverImageUrl = '${AppConfig.apiBaseUrl.replaceAll('/api', '')}$coverImageUrl';
+        }
+        // Extract colors from the event image
+        await _themeController.extractColorsFromImage(NetworkImage(coverImageUrl));
+      } else {
+        // Fallback to category-based colors if no image
+        final categoryColor = CategoryImageHelper.getCategoryAccent(event.category);
+        _themeController.extractColorsFromGradient(categoryColor);
+      }
     }
   }
 
