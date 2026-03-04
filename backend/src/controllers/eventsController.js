@@ -54,10 +54,25 @@ const getEvents = asyncWrapper(async (req, res, next) => {
     Event.countDocuments(filter),
   ]);
 
+  // If user is authenticated, check which events are saved
+  let savedEventIds = [];
+  if (req.userId) {
+    const User = require('../models/User');
+    const user = await User.findById(req.userId);
+    savedEventIds = user.savedEvents.map(id => id.toString());
+  }
+
+  // Add isUserSaved to each event
+  const eventsWithSavedStatus = events.map(event => {
+    const eventObj = event.toObject();
+    eventObj.isUserSaved = savedEventIds.includes(event._id.toString());
+    return eventObj;
+  });
+
   res.json({
     success: true,
     data: {
-      events,
+      events: eventsWithSavedStatus,
       pagination: {
         page,
         limit,
@@ -86,20 +101,28 @@ const getEvent = asyncWrapper(async (req, res, next) => {
   // Check if user is registered (if authenticated)
   let isUserRegistered = false;
   let isUserOrganizer = false;
-  
+  let isUserSaved = false;
+
   if (req.userId) {
+    const User = require('../models/User');
     const userObjectId = new mongoose.Types.ObjectId(req.userId);
-    
+
     // Check if user is the organizer
     if (event.createdBy && event.createdBy._id.toString() === userObjectId.toString()) {
       isUserOrganizer = true;
     }
-    
+
     // Check if user is registered
     const registration = event.attendees.find(
       (a) => a.user.toString() === userObjectId.toString() && a.status === 'registered'
     );
     isUserRegistered = !!registration;
+
+    // Check if user has saved this event
+    const user = await User.findById(req.userId);
+    // Convert both to strings for reliable comparison
+    const savedEventIdStrings = user.savedEvents.map(id => id.toString());
+    isUserSaved = savedEventIdStrings.includes(event._id.toString());
   }
 
   // Get registered attendees count
@@ -118,6 +141,7 @@ const getEvent = asyncWrapper(async (req, res, next) => {
   const eventObj = event.toObject();
   eventObj.isUserRegistered = isUserRegistered;
   eventObj.isUserOrganizer = isUserOrganizer;
+  eventObj.isUserSaved = isUserSaved;
   eventObj.attendeeCount = attendeeCount;
   eventObj.attendees = populatedAttendees.map((u) => ({
     id: u._id,
@@ -504,6 +528,108 @@ const getRegisteredEvents = asyncWrapper(async (req, res, next) => {
   });
 });
 
+// Save an event
+const saveEvent = asyncWrapper(async (req, res, next) => {
+  const User = require('../models/User');
+
+  const event = await Event.findById(req.params.id);
+
+  if (!event) {
+    return next(new APIError('Event not found', 404));
+  }
+
+  const user = await User.findById(req.userId);
+
+  // Use a more reliable comparison for ObjectId
+  const eventIdStr = event._id.toString();
+  const isAlreadySaved = user.savedEvents.some(
+    (id) => id.toString() === eventIdStr
+  );
+  
+  if (isAlreadySaved) {
+    return next(new APIError('Event is already saved', 400));
+  }
+
+  user.savedEvents.push(event._id);
+  await user.save();
+
+  res.status(201).json({
+    success: true,
+    message: 'Event saved successfully',
+    data: { eventId: event._id, saved: true },
+  });
+});
+
+// Unsave an event
+const unsaveEvent = asyncWrapper(async (req, res, next) => {
+  const User = require('../models/User');
+
+  const event = await Event.findById(req.params.id);
+
+  if (!event) {
+    return next(new APIError('Event not found', 404));
+  }
+
+  const user = await User.findById(req.userId);
+
+  // Use string comparison for reliable ObjectId matching
+  const eventIdStr = event._id.toString();
+  const isSaved = user.savedEvents.some(
+    (id) => id.toString() === eventIdStr
+  );
+  
+  if (!isSaved) {
+    return next(new APIError('Event is not saved', 400));
+  }
+
+  user.savedEvents = user.savedEvents.filter(
+    (id) => id.toString() !== eventIdStr
+  );
+  await user.save();
+
+  res.json({
+    success: true,
+    message: 'Event unsaved successfully',
+    data: { eventId: event._id, saved: false },
+  });
+});
+
+// Get saved events
+const getSavedEvents = asyncWrapper(async (req, res, next) => {
+  const User = require('../models/User');
+
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  const skip = (page - 1) * limit;
+
+  const user = await User.findById(req.userId);
+  const savedEventIds = user.savedEvents;
+
+  const [events, total] = await Promise.all([
+    Event.find({ _id: { $in: savedEventIds }, isCancelled: false })
+      .sort({ startTime: 1 })
+      .skip(skip)
+      .limit(limit)
+      .populate('createdBy', 'displayName email avatarUrl city'),
+    Event.countDocuments({ _id: { $in: savedEventIds }, isCancelled: false }),
+  ]);
+
+  // Add isUserSaved: true to each event since they're saved events
+  const eventsWithSavedStatus = events.map(event => {
+    const eventObj = event.toObject();
+    eventObj.isUserSaved = true;
+    return eventObj;
+  });
+
+  res.json({
+    success: true,
+    data: {
+      events: eventsWithSavedStatus,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    },
+  });
+});
+
 module.exports = {
   getEvents,
   getEvent,
@@ -514,4 +640,7 @@ module.exports = {
   registerForEvent,
   unregisterFromEvent,
   getRegisteredEvents,
+  saveEvent,
+  unsaveEvent,
+  getSavedEvents,
 };

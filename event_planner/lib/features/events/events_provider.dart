@@ -214,6 +214,7 @@ class Event {
   final List<SubEvent> subEvents;
   final bool isUserRegistered;
   final String? registrationId; // Unique QR code ID
+  final bool isUserSaved; // Whether the user has saved this event
   
   // New fields for dynamic event detail screen
   final String? coverImageUrl;
@@ -247,6 +248,7 @@ class Event {
     this.subEvents = const [],
     this.isUserRegistered = false,
     this.registrationId,
+    this.isUserSaved = false,
     this.coverImageUrl,
     this.tags = const [],
     this.organizer,
@@ -344,6 +346,7 @@ class Event {
       subEvents: subEventsList,
       isUserRegistered: json['isUserRegistered'] ?? false,
       registrationId: json['registrationId'],
+      isUserSaved: json['isUserSaved'] ?? false,
       coverImageUrl: (json['coverImageUrl'] is String && json['coverImageUrl'].isNotEmpty) 
           ? json['coverImageUrl'] 
           : null,
@@ -379,6 +382,7 @@ class Event {
       'subEvents': subEvents.map((e) => e.toJson()).toList(),
       'isUserRegistered': isUserRegistered,
       'registrationId': registrationId,
+      'isUserSaved': isUserSaved,
       'coverImageUrl': coverImageUrl,
       'tags': tags,
       'organizer': organizer?.toJson(),
@@ -412,6 +416,7 @@ class Event {
     List<SubEvent>? subEvents,
     bool? isUserRegistered,
     String? registrationId,
+    bool? isUserSaved,
     String? coverImageUrl,
     List<String>? tags,
     Organizer? organizer,
@@ -443,6 +448,7 @@ class Event {
       subEvents: subEvents ?? this.subEvents,
       isUserRegistered: isUserRegistered ?? this.isUserRegistered,
       registrationId: registrationId ?? this.registrationId,
+      isUserSaved: isUserSaved ?? this.isUserSaved,
       coverImageUrl: coverImageUrl ?? this.coverImageUrl,
       tags: tags ?? this.tags,
       organizer: organizer ?? this.organizer,
@@ -464,6 +470,7 @@ class EventsProvider with ChangeNotifier {
 
   List<Event> _events = [];
   List<Event> _registeredEvents = [];
+  List<Event> _savedEvents = [];
   Event? _currentEvent;
   bool _isLoading = false;
   bool _isLoadingMore = false;
@@ -479,12 +486,19 @@ class EventsProvider with ChangeNotifier {
     required this.storage,
   }) {
     _loadRegisteredEvents();
+    _loadSavedEvents();
   }
 
   List<Event> get events => _events;
   List<Event> get registeredEvents {
     // Sort events by date in ascending order (soonest first)
     final sortedEvents = List<Event>.from(_registeredEvents);
+    sortedEvents.sort((a, b) => a.startTime.compareTo(b.startTime));
+    return sortedEvents;
+  }
+  List<Event> get savedEvents {
+    // Sort events by date in ascending order (soonest first)
+    final sortedEvents = List<Event>.from(_savedEvents);
     sortedEvents.sort((a, b) => a.startTime.compareTo(b.startTime));
     return sortedEvents;
   }
@@ -777,6 +791,7 @@ class EventsProvider with ChangeNotifier {
   // Initialize/refresh data after login
   Future<void> initialize() async {
     await _loadRegisteredEvents();
+    await _loadSavedEvents();
   }
 
   // Refresh registered events
@@ -999,5 +1014,202 @@ class EventsProvider with ChangeNotifier {
 
   bool isEventRegistered(String eventId) {
     return _registeredEvents.any((e) => e.id == eventId);
+  }
+
+  bool isEventSaved(String eventId) {
+    return _savedEvents.any((e) => e.id == eventId);
+  }
+
+  // Get saved events
+  Future<bool> fetchSavedEvents({bool refresh = false}) async {
+    if (refresh) {
+      _currentPage = 1;
+      _hasMore = true;
+      _savedEvents = [];
+    }
+
+    if (_isLoading) return false;
+
+    _isLoading = _savedEvents.isEmpty;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        _error = 'Not authenticated';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
+      final response = await eventService.getSavedEvents(
+        token: token,
+        page: _currentPage,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> eventsJson = data['data']['events'];
+        final pagination = data['data']['pagination'];
+
+        final newEvents = eventsJson.map((e) => Event.fromJson(e)).toList();
+
+        if (refresh) {
+          _savedEvents = newEvents;
+        } else {
+          _savedEvents.addAll(newEvents);
+        }
+
+        _hasMore = _currentPage < pagination['pages'];
+        _currentPage++;
+
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _error = 'Failed to load saved events';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = 'Network error: ${e.toString()}';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Save an event
+  Future<bool> saveEvent(String eventId) async {
+    _isRegistering = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        _error = 'Not authenticated';
+        _isRegistering = false;
+        notifyListeners();
+        return false;
+      }
+
+      final response = await eventService.saveEvent(
+        eventId: eventId,
+        token: token,
+      );
+
+      if (response.statusCode == 201) {
+        // Update the current event's saved status
+        if (_currentEvent != null && _currentEvent!.id == eventId) {
+          _currentEvent = _currentEvent!.copyWith(
+            isUserSaved: true,
+          );
+        }
+        // Update event in list if present
+        final eventIndex = _events.indexWhere((e) => e.id == eventId);
+        if (eventIndex != -1) {
+          _events[eventIndex] = _events[eventIndex].copyWith(
+            isUserSaved: true,
+          );
+        }
+        // Refresh saved events to ensure My Events page is updated
+        await fetchSavedEvents(refresh: true);
+        _isRegistering = false;
+        notifyListeners();
+        return true;
+      } else {
+        final data = jsonDecode(response.body);
+        _error = data['error'] ?? 'Failed to save event';
+        _isRegistering = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = 'Network error: ${e.toString()}';
+      _isRegistering = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Unsave an event
+  Future<bool> unsaveEvent(String eventId) async {
+    _isRegistering = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        _error = 'Not authenticated';
+        _isRegistering = false;
+        notifyListeners();
+        return false;
+      }
+
+      final response = await eventService.unsaveEvent(
+        eventId: eventId,
+        token: token,
+      );
+
+      if (response.statusCode == 200) {
+        // Update the current event's saved status
+        if (_currentEvent != null && _currentEvent!.id == eventId) {
+          _currentEvent = _currentEvent!.copyWith(
+            isUserSaved: false,
+          );
+        }
+        // Update event in list if present
+        final eventIndex = _events.indexWhere((e) => e.id == eventId);
+        if (eventIndex != -1) {
+          _events[eventIndex] = _events[eventIndex].copyWith(
+            isUserSaved: false,
+          );
+        }
+        // Remove from saved events list
+        _savedEvents.removeWhere((e) => e.id == eventId);
+        // Refresh saved events to ensure My Events page is updated
+        await fetchSavedEvents(refresh: true);
+        _isRegistering = false;
+        notifyListeners();
+        return true;
+      } else {
+        final data = jsonDecode(response.body);
+        _error = data['error'] ?? 'Failed to unsave event';
+        _isRegistering = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = 'Network error: ${e.toString()}';
+      _isRegistering = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Load saved events from storage
+  Future<void> _loadSavedEvents() async {
+    try {
+      final token = await _getToken();
+      if (token == null) return;
+      
+      final response = await eventService.getSavedEvents(
+        token: token,
+        page: 1,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> eventsJson = data['data']['events'];
+        _savedEvents = eventsJson.map((e) => Event.fromJson(e)).toList();
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error loading saved events: $e');
+    }
   }
 }

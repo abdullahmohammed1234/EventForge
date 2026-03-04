@@ -365,13 +365,6 @@ Join me at this event!
           mainAxisSize: MainAxisSize.min,
           children: [
             _buildCircularButton(
-              icon: _isFavorite ? Icons.favorite : Icons.favorite_border,
-              onTap: () {
-                setState(() => _isFavorite = !_isFavorite);
-              },
-            ),
-            const SizedBox(width: 8),
-            _buildCircularButton(
               icon: Icons.share,
               onTap: () {
                 if (event != null) {
