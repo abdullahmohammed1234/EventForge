@@ -53,6 +53,147 @@ class SubEvent {
   }
 }
 
+/// Organizer model for event detail
+class Organizer {
+  final String? id;
+  final String name;
+  final String? type;
+  final String? avatarUrl;
+
+  Organizer({
+    this.id,
+    required this.name,
+    this.type,
+    this.avatarUrl,
+  });
+
+  factory Organizer.fromJson(Map<String, dynamic> json) {
+    return Organizer(
+      id: json['id'] ?? json['_id'],
+      name: json['displayName'] ?? json['name'] ?? 'Event Organizer',
+      type: json['type'],
+      avatarUrl: json['avatarUrl'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'type': type,
+      'avatarUrl': avatarUrl,
+    };
+  }
+}
+
+/// Location model for event
+class EventLocation {
+  final String? name;
+  final String? address;
+  final double? latitude;
+  final double? longitude;
+
+  EventLocation({
+    this.name,
+    this.address,
+    this.latitude,
+    this.longitude,
+  });
+
+  factory EventLocation.fromJson(Map<String, dynamic> json) {
+    // Handle nested location object
+    final locationData = json['location'] is Map ? json['location'] : json;
+    
+    double? lat;
+    double? lng;
+    
+    if (locationData != null && locationData['coordinates'] != null) {
+      final coords = locationData['coordinates'];
+      if (coords is List && coords.length >= 2) {
+        lng = (coords[0] as num).toDouble();
+        lat = (coords[1] as num).toDouble();
+        // Only use coordinates if they are valid (not 0,0)
+        if (lat == 0 && lng == 0) {
+          lat = null;
+          lng = null;
+        }
+      }
+    }
+    
+    return EventLocation(
+      name: locationData?['name'] ?? json['city'],
+      address: json['address'],
+      latitude: lat ?? json['latitude'],
+      longitude: lng ?? json['longitude'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'address': address,
+      'latitude': latitude,
+      'longitude': longitude,
+    };
+  }
+}
+
+/// Contact info for event
+class EventContact {
+  final String? phone;
+  final String? email;
+
+  EventContact({
+    this.phone,
+    this.email,
+  });
+
+  factory EventContact.fromJson(Map<String, dynamic> json) {
+    final contactData = json['contact'] is Map ? json['contact'] : json;
+    return EventContact(
+      phone: contactData?['phone'],
+      email: contactData?['email'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'phone': phone,
+      'email': email,
+    };
+  }
+}
+
+/// Attendee model
+class Attendee {
+  final String id;
+  final String? name;
+  final String? avatarUrl;
+
+  Attendee({
+    required this.id,
+    this.name,
+    this.avatarUrl,
+  });
+
+  factory Attendee.fromJson(Map<String, dynamic> json) {
+    final userData = json['user'] is Map ? json['user'] : json;
+    return Attendee(
+      id: userData?['_id'] ?? userData?['id'] ?? json['id'] ?? '',
+      name: userData?['displayName'] ?? userData?['name'],
+      avatarUrl: userData?['avatarUrl'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'avatarUrl': avatarUrl,
+    };
+  }
+}
+
 class Event {
   final String id;
   final String title;
@@ -72,6 +213,19 @@ class Event {
   final List<SubEvent> subEvents;
   final bool isUserRegistered;
   final String? registrationId; // Unique QR code ID
+  
+  // New fields for dynamic event detail screen
+  final String? coverImageUrl;
+  final List<String> tags;
+  final Organizer? organizer;
+  final EventContact? contact;
+  final List<Attendee> attendees;
+  final int attendeeCount;
+  final List<String> highlights;
+  final bool isFree;
+  final double? price;
+  final EventLocation? location;
+  final bool? isUserOrganizer;
 
   Event({
     required this.id,
@@ -92,6 +246,17 @@ class Event {
     this.subEvents = const [],
     this.isUserRegistered = false,
     this.registrationId,
+    this.coverImageUrl,
+    this.tags = const [],
+    this.organizer,
+    this.contact,
+    this.attendees = const [],
+    this.attendeeCount = 0,
+    this.highlights = const [],
+    this.isFree = true,
+    this.price,
+    this.location,
+    this.isUserOrganizer,
   });
 
   factory Event.fromJson(Map<String, dynamic> json) {
@@ -117,6 +282,47 @@ class Event {
       }
     }
     
+    // Build organizer from createdBy field
+    Organizer? organizer;
+    if (json['createdBy'] != null) {
+      final creator = json['createdBy'];
+      organizer = Organizer(
+        id: creator['_id'] ?? creator['id'],
+        name: creator['displayName'] ?? 'Event Organizer',
+        type: creator['type'] ?? creator['city'] != null ? 'Local Community' : null,
+        avatarUrl: creator['avatarUrl'],
+      );
+    }
+    
+    // Build attendees list
+    List<Attendee> attendeesList = [];
+    if (json['attendees'] != null) {
+      attendeesList = (json['attendees'] as List)
+          .map((e) => Attendee.fromJson(e))
+          .toList();
+    }
+    
+    // Extract tags
+    List<String> tagsList = [];
+    if (json['tags'] != null) {
+      tagsList = (json['tags'] as List).map((e) => e.toString()).toList();
+    }
+    
+    // Extract highlights
+    List<String> highlightsList = [];
+    if (json['highlights'] != null) {
+      highlightsList = (json['highlights'] as List).map((e) => e.toString()).toList();
+    }
+    
+    // Build location object
+    final eventLocation = EventLocation.fromJson(json);
+    
+    // Build contact object
+    final eventContact = EventContact.fromJson(json);
+    
+    // Determine if event is free
+    final isFree = json['isFree'] == true || json['price'] == null || json['price'] == 0;
+    
     return Event(
       id: json['id'] ?? json['_id'],
       title: json['title'],
@@ -132,10 +338,21 @@ class Event {
       currentAttendees: (json['currentAttendees'] as num?)?.toInt() ?? 0,
       createdBy: json['createdBy']?['id'] ?? json['createdBy']?['_id'] ?? json['createdBy'] ?? '',
       creatorName: json['createdBy']?['displayName'],
-      createdAt: DateTime.parse(json['createdAt']),
+      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
       subEvents: subEventsList,
       isUserRegistered: json['isUserRegistered'] ?? false,
       registrationId: json['registrationId'],
+      coverImageUrl: json['coverImageUrl'],
+      tags: tagsList,
+      organizer: organizer,
+      contact: eventContact,
+      attendees: attendeesList,
+      attendeeCount: json['attendeeCount'] ?? (json['currentAttendees'] as num?)?.toInt() ?? 0,
+      highlights: highlightsList,
+      isFree: isFree,
+      price: json['price'] != null ? (json['price'] as num).toDouble() : null,
+      location: eventLocation,
+      isUserOrganizer: json['isUserOrganizer'] ?? false,
     );
   }
 
@@ -158,6 +375,17 @@ class Event {
       'subEvents': subEvents.map((e) => e.toJson()).toList(),
       'isUserRegistered': isUserRegistered,
       'registrationId': registrationId,
+      'coverImageUrl': coverImageUrl,
+      'tags': tags,
+      'organizer': organizer?.toJson(),
+      'contact': contact?.toJson(),
+      'attendees': attendees.map((e) => e.toJson()).toList(),
+      'attendeeCount': attendeeCount,
+      'highlights': highlights,
+      'isFree': isFree,
+      'price': price,
+      'location': location?.toJson(),
+      'isUserOrganizer': isUserOrganizer,
     };
   }
 
@@ -180,6 +408,17 @@ class Event {
     List<SubEvent>? subEvents,
     bool? isUserRegistered,
     String? registrationId,
+    String? coverImageUrl,
+    List<String>? tags,
+    Organizer? organizer,
+    EventContact? contact,
+    List<Attendee>? attendees,
+    int? attendeeCount,
+    List<String>? highlights,
+    bool? isFree,
+    double? price,
+    EventLocation? location,
+    bool? isUserOrganizer,
   }) {
     return Event(
       id: id ?? this.id,
@@ -200,6 +439,17 @@ class Event {
       subEvents: subEvents ?? this.subEvents,
       isUserRegistered: isUserRegistered ?? this.isUserRegistered,
       registrationId: registrationId ?? this.registrationId,
+      coverImageUrl: coverImageUrl ?? this.coverImageUrl,
+      tags: tags ?? this.tags,
+      organizer: organizer ?? this.organizer,
+      contact: contact ?? this.contact,
+      attendees: attendees ?? this.attendees,
+      attendeeCount: attendeeCount ?? this.attendeeCount,
+      highlights: highlights ?? this.highlights,
+      isFree: isFree ?? this.isFree,
+      price: price ?? this.price,
+      location: location ?? this.location,
+      isUserOrganizer: isUserOrganizer ?? this.isUserOrganizer,
     );
   }
 }
