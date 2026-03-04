@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'events_provider.dart';
 import 'widgets/dynamic_theme_controller.dart';
 import 'widgets/category_pill.dart';
@@ -55,6 +56,48 @@ class _EventDetailPageState extends State<EventDetailPage>
   final DynamicThemeController _themeController = DynamicThemeController();
   bool _isDescriptionExpanded = false;
   int _currentNavIndex = 0;
+
+  Future<void> _openGoogleMaps(Event event) async {
+    String query;
+    if (event.latitude != null && event.longitude != null &&
+        event.latitude != 0 && event.longitude != 0) {
+      query = '${event.latitude},${event.longitude}';
+    } else {
+      final locationString = event.address ?? event.city;
+      if (locationString.isNotEmpty) {
+        query = Uri.encodeComponent(locationString);
+      } else {
+        return;
+      }
+    }
+    
+    final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$query');
+    
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  Future<void> _getPublicTransit(Event event) async {
+    String query;
+    if (event.latitude != null && event.longitude != null &&
+        event.latitude != 0 && event.longitude != 0) {
+      query = '${event.latitude},${event.longitude}';
+    } else {
+      final locationString = event.address ?? event.city;
+      if (locationString.isNotEmpty) {
+        query = Uri.encodeComponent(locationString);
+      } else {
+        return;
+      }
+    }
+    
+    final url = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$query&travelmode=transit');
+    
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
 
   @override
   void initState() {
@@ -515,6 +558,26 @@ Join me at this event!
           address: event.address ?? 'Address not specified',
           imageUrl: null,
           accentColor: theme.dominantColor,
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => _openGoogleMaps(event),
+                icon: const Icon(Icons.map),
+                label: const Text('Open Maps'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => _getPublicTransit(event),
+                icon: const Icon(Icons.directions_transit),
+                label: const Text('Public Transit'),
+              ),
+            ),
+          ],
         ),
       ],
     );

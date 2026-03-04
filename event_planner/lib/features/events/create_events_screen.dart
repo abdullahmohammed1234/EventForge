@@ -296,7 +296,6 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                   ),
                 ),
               ],
-              const SizedBox(height: 24),
               ElevatedButton(
                 onPressed:
                     eventsProvider.isLoading ? null : _handleCreateEvent,
