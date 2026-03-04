@@ -4,11 +4,11 @@ import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'events_provider.dart';
 import 'widgets/dynamic_theme_controller.dart';
 import 'widgets/category_pill.dart';
 import 'widgets/overlapping_avatars.dart';
-import 'widgets/location_preview_card.dart';
 import 'widgets/bottom_floating_nav.dart';
 
 /// Category-based image provider helper
@@ -56,14 +56,19 @@ class _EventDetailPageState extends State<EventDetailPage>
   final DynamicThemeController _themeController = DynamicThemeController();
   bool _isDescriptionExpanded = false;
   int _currentNavIndex = 0;
+  bool _isFavorite = false;
 
   Future<void> _openGoogleMaps(Event event) async {
+    // Try to use coordinates from location first
+    final double? lat = event.location?.latitude ?? event.latitude;
+    final double? lng = event.location?.longitude ?? event.longitude;
+    
     String query;
-    if (event.latitude != null && event.longitude != null &&
-        event.latitude != 0 && event.longitude != 0) {
-      query = '${event.latitude},${event.longitude}';
+    if (lat != null && lng != null && lat != 0 && lng != 0) {
+      query = '$lat,$lng';
     } else {
-      final locationString = event.address ?? event.city;
+      // Fallback to address
+      final String locationString = event.location?.name ?? event.city;
       if (locationString.isNotEmpty) {
         query = Uri.encodeComponent(locationString);
       } else {
@@ -78,24 +83,17 @@ class _EventDetailPageState extends State<EventDetailPage>
     }
   }
 
-  Future<void> _getPublicTransit(Event event) async {
-    String query;
-    if (event.latitude != null && event.longitude != null &&
-        event.latitude != 0 && event.longitude != 0) {
-      query = '${event.latitude},${event.longitude}';
-    } else {
-      final locationString = event.address ?? event.city;
-      if (locationString.isNotEmpty) {
-        query = Uri.encodeComponent(locationString);
-      } else {
-        return;
-      }
-    }
-    
-    final url = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$query&travelmode=transit');
-    
+  Future<void> _openEmail(String email) async {
+    final url = Uri.parse('mailto:$email');
     if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
+      await launchUrl(url);
+    }
+  }
+
+  Future<void> _openPhone(String phone) async {
+    final url = Uri.parse('tel:$phone');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
     }
   }
 
@@ -146,8 +144,20 @@ class _EventDetailPageState extends State<EventDetailPage>
     super.dispose();
   }
 
+  String _formatDate(DateTime date) {
+    return DateFormat('EEEE, MMMM d, yyyy').format(date);
+  }
+
   String _formatTime(DateTime time) {
     return DateFormat('h:mm a').format(time);
+  }
+
+  String _formatTimeRange(DateTime start, DateTime? end) {
+    final startTime = _formatTime(start);
+    if (end != null) {
+      return '$startTime - ${_formatTime(end)}';
+    }
+    return startTime;
   }
 
   void _shareEvent(Event event) {
@@ -155,9 +165,9 @@ class _EventDetailPageState extends State<EventDetailPage>
 Check out this event!
 
 ${event.title}
-📍 ${event.city}
-📅 ${DateFormat('MMM d, yyyy').format(event.startTime)}
-🕕 ${DateFormat('h:mm a').format(event.startTime)}
+📍 ${event.location?.name ?? event.city}
+📅 ${_formatDate(event.startTime)}
+🕕 ${_formatTimeRange(event.startTime, event.endTime)}
 
 ${event.description ?? ''}
 
@@ -201,18 +211,10 @@ Join me at this event!
         resizeToAvoidBottomInset: false,
         body: Stack(
           children: [
-            // 1. Background Image (Fullscreen) - using category-based gradient
+            // 1. Background Image or Category Gradient
             Positioned.fill(
               child: event != null
-                  ? Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: CategoryImageHelper.getCategoryGradient(event.category),
-                        ),
-                      ),
-                    )
+                  ? _buildHeroImage(event)
                   : Container(color: Colors.grey[900]),
             ),
 
@@ -294,55 +296,90 @@ Join me at this event!
     );
   }
 
-  /// Build top controls row with back button, category pill, and share button
-  Widget _buildTopControls(Event? event) {
-    return Stack(
-      children: [
-        // Left: Back button
-        Positioned(
-          left: 0,
-          top: 0,
-          bottom: 0,
-          child: Center(
-            child: _buildCircularButton(
-              icon: Icons.arrow_back,
-              onTap: () => Navigator.of(context).pop(),
+  /// Build hero image section
+  Widget _buildHeroImage(Event event) {
+    if (event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty) {
+      return CachedNetworkImage(
+        imageUrl: event.coverImageUrl!,
+        fit: BoxFit.cover,
+        placeholder: (context, url) => Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: CategoryImageHelper.getCategoryGradient(event.category),
             ),
           ),
         ),
+        errorWidget: (context, url, error) => Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: CategoryImageHelper.getCategoryGradient(event.category),
+            ),
+          ),
+        ),
+      );
+    }
+    // Fallback to gradient
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: CategoryImageHelper.getCategoryGradient(event.category),
+        ),
+      ),
+    );
+  }
 
-        // Center: Category Pill
-        Center(
-          child: event != null
-              ? Consumer<DynamicThemeController>(
-                  builder: (context, theme, _) {
-                    return CategoryPill(
-                      category: event.category,
-                      backgroundColor: theme.isLoading
-                          ? DynamicThemeController.defaultAccent
-                          : theme.lightVibrantColor,
-                    );
-                  },
-                )
-              : const SizedBox.shrink(),
+  /// Build top controls row with back button, category pill, and action buttons
+  Widget _buildTopControls(Event? event) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // Left: Back button
+        _buildCircularButton(
+          icon: Icons.arrow_back,
+          onTap: () => Navigator.of(context).pop(),
         ),
 
-        // Right: Share button
-        Positioned(
-          right: 0,
-          top: 0,
-          bottom: 0,
-          child: Center(
-            child: _buildCircularButton(
+        // Center: Category Pill (floating over hero)
+        if (event != null)
+          Consumer<DynamicThemeController>(
+            builder: (context, theme, _) {
+              return CategoryPill(
+                category: event.category,
+                backgroundColor: theme.isLoading
+                    ? DynamicThemeController.defaultAccent
+                    : theme.lightVibrantColor,
+              );
+            },
+          )
+        else
+          const SizedBox.shrink(),
+
+        // Right: Favorite + Share buttons
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildCircularButton(
+              icon: _isFavorite ? Icons.favorite : Icons.favorite_border,
+              onTap: () {
+                setState(() => _isFavorite = !_isFavorite);
+              },
+            ),
+            const SizedBox(width: 8),
+            _buildCircularButton(
               icon: Icons.share,
               onTap: () {
-                // Share event
                 if (event != null) {
                   _shareEvent(event);
                 }
               },
             ),
-          ),
+          ],
         ),
       ],
     );
@@ -418,63 +455,50 @@ Join me at this event!
                   ),
                   const SizedBox(height: 20),
 
-                  // Event Title
-                  Text(
-                    event.title,
-                    style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      height: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Subtitle (Venue)
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on_outlined,
-                        size: 18,
-                        color: Colors.grey[600],
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          event.city,
-                          style: TextStyle(
-                            fontSize: 15,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  // Event Title Section
+                  _buildTitleSection(event, theme),
                   const SizedBox(height: 16),
 
-                  // Info Row (Date / Time / Going)
-                  _buildInfoRow(event, theme),
-                  const SizedBox(height: 20),
+                  // Date & Time Section
+                  _buildDateTimeSection(event, theme),
+                  const SizedBox(height: 16),
 
-                  // Location Section with Image Preview
+                  // Location Section
                   _buildLocationSection(event, theme),
                   const SizedBox(height: 20),
 
-                  // Hosted By
+                  // Hosted By Section
                   _buildHostedBySection(event, theme),
                   const SizedBox(height: 16),
 
-                  // People Going with overlapping avatars
-                  _buildPeopleGoingSection(event, theme),
+                  // Contact Section
+                  if (event.contact != null && 
+                      (event.contact!.phone != null || event.contact!.email != null))
+                    _buildContactSection(event, theme),
+
+                  // Attendees Preview
+                  _buildAttendeesSection(event, theme),
                   const SizedBox(height: 20),
 
-                  // About Event (Expandable)
+                  // About Event Section
                   if (event.description != null && event.description!.isNotEmpty)
                     _buildAboutSection(event, theme),
+                  
+                  // What to Expect Section
+                  if (event.highlights.isNotEmpty)
+                    _buildWhatToExpectSection(event, theme),
+                  
+                  // Tickets & Pricing Section
+                  _buildTicketsSection(event, theme),
                   
                   const SizedBox(height: 24),
 
                   // Primary CTA Button
                   _buildCTAButton(event, theme),
+                  
+                  // Secondary Action (Cancel/Unregister)
+                  if (event.isUserRegistered || event.isUserOrganizer == true)
+                    _buildSecondaryButton(event, theme),
                   
                   const SizedBox(height: 20),
                 ],
@@ -486,53 +510,104 @@ Join me at this event!
     );
   }
 
-  /// Build info row with Date, Time, and Going count
-  Widget _buildInfoRow(Event event, DynamicThemeController theme) {
-    return Row(
+  /// Build title section with tags
+  Widget _buildTitleSection(Event event, DynamicThemeController theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildInfoChip(
-          icon: Icons.calendar_today,
-          label: DateFormat('MMM d').format(event.startTime),
-          theme: theme,
+        // Event Title
+        Text(
+          event.title,
+          style: const TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.bold,
+            height: 1.2,
+          ),
         ),
-        const SizedBox(width: 12),
-        _buildInfoChip(
-          icon: Icons.access_time,
-          label: _formatTime(event.startTime),
-          theme: theme,
-        ),
-        const SizedBox(width: 12),
-        _buildInfoChip(
-          icon: Icons.people_outline,
-          label: '${event.currentAttendees} going',
-          theme: theme,
-        ),
+        
+        // Tags
+        if (event.tags.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: event.tags.map((tag) => _buildTag(tag, theme)).toList(),
+          ),
+        ],
       ],
     );
   }
 
-  Widget _buildInfoChip({
-    required IconData icon,
-    required String label,
-    required DynamicThemeController theme,
-  }) {
+  Widget _buildTag(String tag, DynamicThemeController theme) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: theme.mutedColor.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(20),
+        color: theme.dominantColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        '#$tag',
+        style: TextStyle(
+          fontSize: 12,
+          color: theme.dominantColor,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  /// Build date and time section
+  Widget _buildDateTimeSection(Event event, DynamicThemeController theme) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.mutedColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: theme.dominantColor),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: theme.dominantColor,
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: theme.accentColor.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.calendar_today,
+              color: theme.accentColor,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Date & Time',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _formatDate(event.startTime),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _formatTimeRange(event.startTime, event.endTime),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -542,42 +617,71 @@ Join me at this event!
 
   /// Build location section with preview card
   Widget _buildLocationSection(Event event, DynamicThemeController theme) {
+    final String locationName = event.location?.name ?? event.city;
+    final String address = event.location?.address ?? event.address ?? 'Address not specified';
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Location',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: theme.mutedColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: theme.accentColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.location_on,
+                  color: theme.accentColor,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      locationName,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      address,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[600],
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 12),
-        LocationPreviewCard(
-          locationName: event.city,
-          address: event.address ?? 'Address not specified',
-          imageUrl: null,
-          accentColor: theme.dominantColor,
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _openGoogleMaps(event),
-                icon: const Icon(Icons.map),
-                label: const Text('Open Maps'),
-              ),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () => _openGoogleMaps(event),
+            icon: const Icon(Icons.map),
+            label: const Text('View on Map'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _getPublicTransit(event),
-                icon: const Icon(Icons.directions_transit),
-                label: const Text('Public Transit'),
-              ),
-            ),
-          ],
+          ),
         ),
       ],
     );
@@ -585,63 +689,176 @@ Join me at this event!
 
   /// Build hosted by section
   Widget _buildHostedBySection(Event event, DynamicThemeController theme) {
-    final organizerName = event.creatorName ?? 'Event Organizer';
+    final organizerName = event.organizer?.name ?? event.creatorName ?? 'Event Organizer';
+    final organizerType = event.organizer?.type;
+    final organizerAvatar = event.organizer?.avatarUrl;
     
     return Row(
       children: [
         Container(
-          width: 44,
-          height: 44,
+          width: 48,
+          height: 48,
           decoration: BoxDecoration(
             color: theme.dominantColor,
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(24),
+            image: organizerAvatar != null
+                ? DecorationImage(
+                    image: CachedNetworkImageProvider(organizerAvatar),
+                    fit: BoxFit.cover,
+                  )
+                : null,
           ),
-          child: Center(
-            child: Text(
-              organizerName.isNotEmpty ? organizerName[0].toUpperCase() : 'O',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ),
+          child: organizerAvatar == null
+              ? Center(
+                  child: Text(
+                    organizerName.isNotEmpty ? organizerName[0].toUpperCase() : 'O',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                )
+              : null,
         ),
         const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Hosted by',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[500],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Hosted by',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[500],
+                ),
               ),
-            ),
-            Text(
-              organizerName,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
+              Text(
+                organizerName,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-          ],
+              if (organizerType != null)
+                Text(
+                  organizerType,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                  ),
+                ),
+            ],
+          ),
         ),
       ],
     );
   }
 
-  /// Build people going section with overlapping avatars
-  Widget _buildPeopleGoingSection(Event event, DynamicThemeController theme) {
-    final spotsLeft = event.maxAttendees != null
-        ? event.maxAttendees! - event.currentAttendees
-        : null;
-    
-    // Generate mock avatar URLs for demo
-    final mockAvatars = List.generate(
-      4,
-      (i) => 'https://i.pravatar.cc/150?img=${i + 10}',
+  /// Build contact section
+  Widget _buildContactSection(Event event, DynamicThemeController theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Contact',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: theme.mutedColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            children: [
+              if (event.contact?.phone != null)
+                _buildContactRow(
+                  icon: Icons.phone,
+                  label: event.contact!.phone!,
+                  onTap: () => _openPhone(event.contact!.phone!),
+                  theme: theme,
+                ),
+              if (event.contact?.email != null) ...[
+                if (event.contact?.phone != null)
+                  const SizedBox(height: 12),
+                _buildContactRow(
+                  icon: Icons.email,
+                  label: event.contact!.email!,
+                  onTap: () => _openEmail(event.contact!.email!),
+                  theme: theme,
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
     );
+  }
+
+  Widget _buildContactRow({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    required DynamicThemeController theme,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: theme.accentColor.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: theme.accentColor, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                color: theme.accentColor,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Icon(Icons.chevron_right, color: Colors.grey[400]),
+        ],
+      ),
+    );
+  }
+
+  /// Build attendees section
+  Widget _buildAttendeesSection(Event event, DynamicThemeController theme) {
+    // Get attendee avatars from event.attendees or use placeholders
+    final attendeeAvatars = <String>[];
+    if (event.attendees.isNotEmpty) {
+      for (var i = 0; i < event.attendees.length && i < 5; i++) {
+        if (event.attendees[i].avatarUrl != null) {
+          attendeeAvatars.add(event.attendees[i].avatarUrl!);
+        }
+      }
+    }
+    
+    // Use placeholders if no real avatars
+    if (attendeeAvatars.isEmpty) {
+      for (var i = 0; i < 4; i++) {
+        attendeeAvatars.add('https://i.pravatar.cc/150?img=${i + 10}');
+      }
+    }
+    
+    final totalCount = event.attendeeCount;
+    final displayCount = totalCount > 0 ? totalCount : event.currentAttendees;
+    final moreCount = displayCount > 5 ? displayCount - 5 : 0;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -658,14 +875,25 @@ Join me at this event!
             ),
             const SizedBox(height: 8),
             OverlappingAvatars(
-              avatarUrls: mockAvatars,
-              totalCount: event.currentAttendees,
-              maxVisible: 4,
+              avatarUrls: attendeeAvatars,
+              totalCount: displayCount,
+              maxVisible: 5,
               borderColor: theme.dominantColor,
             ),
+            if (moreCount > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  '+$moreCount more',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ),
           ],
         ),
-        if (spotsLeft != null && spotsLeft > 0)
+        if (event.maxAttendees != null)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
@@ -673,7 +901,7 @@ Join me at this event!
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              '$spotsLeft spots left',
+              '${event.maxAttendees! - event.currentAttendees} spots left',
               style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
@@ -690,8 +918,10 @@ Join me at this event!
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const Divider(),
+        const SizedBox(height: 8),
         const Text(
-          'About',
+          'About Event',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -741,39 +971,267 @@ Join me at this event!
     );
   }
 
+  /// Build "What to Expect" section
+  Widget _buildWhatToExpectSection(Event event, DynamicThemeController theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(),
+        const SizedBox(height: 8),
+        const Text(
+          'What to Expect',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...event.highlights.map((highlight) => Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 6),
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: theme.accentColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  highlight,
+                  style: TextStyle(
+                    fontSize: 15,
+                    height: 1.4,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        )),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  /// Build tickets & pricing section
+  Widget _buildTicketsSection(Event event, DynamicThemeController theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(),
+        const SizedBox(height: 8),
+        const Text(
+          'Tickets & Pricing',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: theme.mutedColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: event.isFree 
+                      ? Colors.green.withOpacity(0.2)
+                      : theme.accentColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  event.isFree ? Icons.check_circle : Icons.confirmation_number,
+                  color: event.isFree ? Colors.green : theme.accentColor,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      event.isFree ? 'Free Event' : '\$${event.price?.toStringAsFixed(2) ?? '0.00'}',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: event.isFree ? Colors.green : null,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      event.isFree 
+                          ? 'No registration fee required'
+                          : 'Registration required',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   /// Build CTA button with scale animation and glow
   Widget _buildCTAButton(Event event, DynamicThemeController theme) {
-    return _AnimatedCTAButton(
-      label: event.isUserRegistered ? 'View Ticket' : 'Get Tickets',
-      accentColor: theme.accentColor,
-      onTap: () async {
-        if (event.isUserRegistered) {
-          // Navigate to ticket screen - goes to event planning with QR code
-          context.push('/events/${event.id}/ticket');
-        } else {
-          // Register for event
-          final eventsProvider = context.read<EventsProvider>();
-          final success = await eventsProvider.registerForEvent(event.id);
-          
-          if (success && mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Successfully registered for event!'),
-                backgroundColor: theme.accentColor,
-              ),
-            );
-            // Refresh event to get updated registration status
-            await eventsProvider.getEventById(event.id);
-          } else if (mounted && eventsProvider.error != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(eventsProvider.error ?? 'Failed to register'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
+    final eventsProvider = context.read<EventsProvider>();
+    final isFull = event.maxAttendees != null && 
+                   event.currentAttendees >= event.maxAttendees!;
+    
+    String buttonText;
+    VoidCallback? onTap;
+    
+    if (isFull) {
+      buttonText = 'Event Full';
+      onTap = null;
+    } else if (event.isUserRegistered) {
+      buttonText = 'View Ticket';
+      onTap = () => context.push('/events/${event.id}/ticket');
+    } else {
+      buttonText = 'Register for the Event';
+      onTap = () async {
+        final success = await eventsProvider.registerForEvent(event.id);
+        
+        if (success && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Successfully registered for event!'),
+              backgroundColor: theme.accentColor,
+            ),
+          );
+          // Refresh event to get updated registration status
+          await eventsProvider.getEventById(event.id);
+        } else if (mounted && eventsProvider.error != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(eventsProvider.error ?? 'Failed to register'),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
-      },
+      };
+    }
+
+    return _AnimatedCTAButton(
+      label: buttonText,
+      accentColor: isFull ? Colors.grey : theme.accentColor,
+      onTap: onTap,
+      isLoading: eventsProvider.isRegistering,
+    );
+  }
+
+  /// Build secondary button (Cancel Event / Unregister)
+  Widget _buildSecondaryButton(Event event, DynamicThemeController theme) {
+    if (event.isUserOrganizer == true) {
+      // Show Cancel Event button for organizer
+      return Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: () => _showCancelEventDialog(event, theme),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              side: const BorderSide(color: Colors.red),
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('Cancel Event'),
+          ),
+        ),
+      );
+    } else if (event.isUserRegistered) {
+      // Show Unregister button for attendees
+      return Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: () => _showUnregisterDialog(event, theme),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              side: BorderSide(color: Colors.grey[400]!),
+              foregroundColor: Colors.grey[700],
+            ),
+            child: const Text('Unregister'),
+          ),
+        ),
+      );
+    }
+    
+    return const SizedBox.shrink();
+  }
+
+  void _showUnregisterDialog(Event event, DynamicThemeController theme) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Unregister from Event'),
+        content: const Text('Are you sure you want to unregister from this event?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final eventsProvider = context.read<EventsProvider>();
+              final success = await eventsProvider.unregisterFromEvent(event.id);
+              
+              if (success && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Successfully unregistered from event')),
+                );
+                await eventsProvider.getEventById(event.id);
+              }
+            },
+            child: const Text('Unregister', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCancelEventDialog(Event event, DynamicThemeController theme) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Event'),
+        content: const Text('Are you sure you want to cancel this event? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('No, Keep Event'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // TODO: Implement cancel event API call
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Event cancelled')),
+              );
+            },
+            child: const Text('Yes, Cancel Event', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -783,11 +1241,13 @@ class _AnimatedCTAButton extends StatefulWidget {
   final String label;
   final Color accentColor;
   final VoidCallback? onTap;
+  final bool isLoading;
 
   const _AnimatedCTAButton({
     required this.label,
     required this.accentColor,
     this.onTap,
+    this.isLoading = false,
   });
 
   @override
@@ -818,7 +1278,9 @@ class _AnimatedCTAButtonState extends State<_AnimatedCTAButton>
   }
 
   void _onTapDown(TapDownDetails details) {
-    _controller.forward();
+    if (widget.onTap != null) {
+      _controller.forward();
+    }
   }
 
   void _onTapUp(TapUpDetails details) {
@@ -842,25 +1304,38 @@ class _AnimatedCTAButtonState extends State<_AnimatedCTAButton>
           width: double.infinity,
           height: 56,
           decoration: BoxDecoration(
-            color: widget.accentColor,
+            color: widget.onTap == null 
+                ? widget.accentColor.withOpacity(0.5)
+                : widget.accentColor,
             borderRadius: BorderRadius.circular(30),
-            boxShadow: [
-              BoxShadow(
-                color: widget.accentColor.withOpacity(0.4),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
+            boxShadow: widget.onTap != null
+                ? [
+                    BoxShadow(
+                      color: widget.accentColor.withOpacity(0.4),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ]
+                : null,
           ),
           child: Center(
-            child: Text(
-              widget.label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            child: widget.isLoading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : Text(
+                    widget.label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
           ),
         ),
       ),
