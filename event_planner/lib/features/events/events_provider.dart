@@ -178,10 +178,11 @@ class Attendee {
 
   factory Attendee.fromJson(Map<String, dynamic> json) {
     final userData = json['user'] is Map ? json['user'] : json;
+    final avatarUrl = userData?['avatarUrl'];
     return Attendee(
       id: userData?['_id'] ?? userData?['id'] ?? json['id'] ?? '',
       name: userData?['displayName'] ?? userData?['name'],
-      avatarUrl: userData?['avatarUrl'],
+      avatarUrl: avatarUrl is String && avatarUrl.isNotEmpty ? avatarUrl : null,
     );
   }
 
@@ -286,11 +287,12 @@ class Event {
     Organizer? organizer;
     if (json['createdBy'] != null) {
       final creator = json['createdBy'];
+      final avatarUrl = creator['avatarUrl'];
       organizer = Organizer(
         id: creator['_id'] ?? creator['id'],
         name: creator['displayName'] ?? 'Event Organizer',
         type: creator['type'] ?? creator['city'] != null ? 'Local Community' : null,
-        avatarUrl: creator['avatarUrl'],
+        avatarUrl: avatarUrl is String && avatarUrl.isNotEmpty ? avatarUrl : null,
       );
     }
     
@@ -342,7 +344,9 @@ class Event {
       subEvents: subEventsList,
       isUserRegistered: json['isUserRegistered'] ?? false,
       registrationId: json['registrationId'],
-      coverImageUrl: json['coverImageUrl'],
+      coverImageUrl: (json['coverImageUrl'] is String && json['coverImageUrl'].isNotEmpty) 
+          ? json['coverImageUrl'] 
+          : null,
       tags: tagsList,
       organizer: organizer,
       contact: eventContact,
@@ -713,6 +717,7 @@ class EventsProvider with ChangeNotifier {
     required DateTime startTime,
     DateTime? endTime,
     int? maxAttendees,
+    List<String>? tags,
   }) async {
     _isLoading = true;
     _error = null;
@@ -738,6 +743,7 @@ class EventsProvider with ChangeNotifier {
         startTime: startTime.toIso8601String(),
         endTime: endTime?.toIso8601String(),
         maxAttendees: maxAttendees,
+        tags: tags,
         token: token,
       );
 

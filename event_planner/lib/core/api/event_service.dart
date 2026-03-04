@@ -54,6 +54,7 @@ class EventService {
     required String startTime,
     String? endTime,
     int? maxAttendees,
+    List<String>? tags,
     required String token,
   }) async {
     final body = <String, dynamic>{
@@ -69,6 +70,7 @@ class EventService {
     if (longitude != null) body['longitude'] = longitude;
     if (endTime != null) body['endTime'] = endTime;
     if (maxAttendees != null) body['maxAttendees'] = maxAttendees;
+    if (tags != null && tags.isNotEmpty) body['tags'] = tags;
 
     return _client.post(
       Uri.parse('$baseUrl${Endpoints.events}'),

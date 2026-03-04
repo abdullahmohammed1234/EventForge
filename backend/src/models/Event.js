@@ -66,6 +66,14 @@ const eventSchema = new mongoose.Schema(
       ],
       default: 'other',
     },
+    coverImageUrl: {
+      type: String,
+      trim: true,
+    },
+    tags: [{
+      type: String,
+      trim: true,
+    }],
     city: {
       type: String,
       required: [true, 'City is required'],
@@ -77,6 +85,10 @@ const eventSchema = new mongoose.Schema(
         type: String,
         enum: ['Point'],
         default: 'Point',
+      },
+      name: {
+        type: String,
+        trim: true,
       },
       coordinates: {
         type: [Number], // [longitude, latitude]
@@ -126,6 +138,34 @@ const eventSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
       index: true,
+    },
+    organizer: {
+      type: {
+        type: String,
+        trim: true,
+      },
+    },
+    contact: {
+      phone: {
+        type: String,
+        trim: true,
+      },
+      email: {
+        type: String,
+        trim: true,
+      },
+    },
+    highlights: [{
+      type: String,
+      trim: true,
+    }],
+    isFree: {
+      type: Boolean,
+      default: true,
+    },
+    price: {
+      type: Number,
+      default: 0,
     },
     isPublished: {
       type: Boolean,

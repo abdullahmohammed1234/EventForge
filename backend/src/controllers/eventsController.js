@@ -85,17 +85,48 @@ const getEvent = asyncWrapper(async (req, res, next) => {
 
   // Check if user is registered (if authenticated)
   let isUserRegistered = false;
+  let isUserOrganizer = false;
+  
   if (req.userId) {
     const userObjectId = new mongoose.Types.ObjectId(req.userId);
+    
+    // Check if user is the organizer
+    if (event.createdBy && event.createdBy._id.toString() === userObjectId.toString()) {
+      isUserOrganizer = true;
+    }
+    
+    // Check if user is registered
     const registration = event.attendees.find(
       (a) => a.user.toString() === userObjectId.toString() && a.status === 'registered'
     );
     isUserRegistered = !!registration;
   }
 
-  // Convert to plain object and add isUserRegistered
+  // Get registered attendees count
+  const registeredAttendees = event.attendees.filter(
+    (a) => a.status === 'registered'
+  );
+  const attendeeCount = registeredAttendees.length;
+
+  // Populate attendee details
+  const attendeeIds = registeredAttendees.map((a) => a.user);
+  const populatedAttendees = await mongoose.model('User').find(
+    { _id: { $in: attendeeIds } }
+  ).select('displayName avatarUrl');
+
+  // Convert to plain object and add computed fields
   const eventObj = event.toObject();
   eventObj.isUserRegistered = isUserRegistered;
+  eventObj.isUserOrganizer = isUserOrganizer;
+  eventObj.attendeeCount = attendeeCount;
+  eventObj.attendees = populatedAttendees.map((u) => ({
+    id: u._id,
+    user: {
+      id: u._id,
+      displayName: u.displayName,
+      avatarUrl: u.avatarUrl,
+    },
+  }));
 
   res.json({
     success: true,
@@ -128,6 +159,14 @@ const createEvent = asyncWrapper(async (req, res, next) => {
     startTime,
     endTime,
     maxAttendees,
+    coverImageUrl,
+    tags,
+    locationName,
+    organizerType,
+    contact,
+    highlights,
+    isFree,
+    price,
   } = req.body;
 
   // Validate dates
@@ -143,6 +182,7 @@ const createEvent = asyncWrapper(async (req, res, next) => {
   // Build location object
   const location = {
     type: 'Point',
+    name: locationName,
     coordinates: [longitude || 0, latitude || 0],
   };
 
@@ -150,6 +190,8 @@ const createEvent = asyncWrapper(async (req, res, next) => {
     title,
     description,
     category: category || 'other',
+    coverImageUrl,
+    tags: tags || [],
     city,
     address,
     location,
@@ -157,6 +199,11 @@ const createEvent = asyncWrapper(async (req, res, next) => {
     endTime: endTime ? new Date(endTime) : null,
     maxAttendees: maxAttendees || null,
     createdBy: req.userId,
+    organizer: organizerType,
+    contact: contact || {},
+    highlights: highlights || [],
+    isFree: isFree !== undefined ? isFree : true,
+    price: price || 0,
   });
 
   await event.save();

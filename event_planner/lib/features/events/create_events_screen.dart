@@ -18,6 +18,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   final _cityController = TextEditingController();
   final _addressController = TextEditingController();
   final _maxAttendeesController = TextEditingController();
+  final _tagsController = TextEditingController();
 
   String _selectedCategory = 'other';
   DateTime? _startDateTime;
@@ -42,6 +43,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     _cityController.dispose();
     _addressController.dispose();
     _maxAttendeesController.dispose();
+    _tagsController.dispose();
     super.dispose();
   }
 
@@ -128,13 +130,16 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         maxAttendees: _maxAttendeesController.text.isEmpty
             ? null
             : int.parse(_maxAttendeesController.text),
+        tags: _tagsController.text.isEmpty
+            ? []
+            : _tagsController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
       );
 
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Event created successfully!')),
         );
-        context.pop();
+        context.pushReplacement('/home');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(eventsProvider.error ?? 'Failed to create event')),
@@ -279,6 +284,16 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 decoration: const InputDecoration(
                   labelText: 'Max Attendees (optional)',
                   prefixIcon: const Icon(Icons.people),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _tagsController,
+                decoration: const InputDecoration(
+                  labelText: 'Tags (optional)',
+                  hintText: 'Enter tags separated by commas',
+                  prefixIcon: Icon(Icons.tag),
                   border: OutlineInputBorder(),
                 ),
               ),
