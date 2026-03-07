@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
-class SafetyCenterScreen extends StatelessWidget {
+class SafetyCenterScreen extends StatefulWidget {
   final String? eventId;
   final String? eventName;
 
@@ -10,6 +12,56 @@ class SafetyCenterScreen extends StatelessWidget {
     this.eventId,
     this.eventName,
   });
+
+  @override
+  State<SafetyCenterScreen> createState() => _SafetyCenterScreenState();
+}
+
+class _SafetyCenterScreenState extends State<SafetyCenterScreen> {
+  List<Map<String, String>> _emergencyContacts = [];
+  bool _isLoading = true;
+  
+  static const String _emergencyContactsKey = 'emergency_contacts_';
+  
+  String get eventName => widget.eventName ?? '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEmergencyContacts();
+  }
+
+  Future<void> _loadEmergencyContacts() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final contactsJson = prefs.getString('$_emergencyContactsKey${widget.eventId ?? "default"}');
+      if (contactsJson != null && contactsJson.isNotEmpty) {
+        final List<dynamic> decoded = json.decode(contactsJson);
+        setState(() {
+          _emergencyContacts = decoded.map((e) => Map<String, String>.from(e)).toList();
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _saveEmergencyContacts() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final contactsJson = json.encode(_emergencyContacts);
+      await prefs.setString('$_emergencyContactsKey${widget.eventId ?? "default"}', contactsJson);
+    } catch (e) {
+      // Silently fail
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +73,9 @@ class SafetyCenterScreen extends StatelessWidget {
           onPressed: () => context.pop(),
         ),
       ),
-      body: SingleChildScrollView(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -160,41 +214,88 @@ class SafetyCenterScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            // Contact List (placeholder)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  const CircleAvatar(
-                    radius: 20,
-                    child: Icon(Icons.person),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'No emergency contacts added',
-                          style: TextStyle(fontWeight: FontWeight.w500),
-                        ),
-                        Text(
-                          'Tap above to add contacts',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
+            // Contact List
+            if (_emergencyContacts.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      child: Icon(Icons.person),
                     ),
-                  ),
-                ],
-              ),
-            ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'No emergency contacts added',
+                            style: TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                          Text(
+                            'Tap above to add contacts',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              ...(_emergencyContacts.map((contact) => Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const CircleAvatar(
+                      radius: 20,
+                      backgroundColor: Colors.red,
+                      child: Icon(Icons.person, color: Colors.white),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            contact['name'] ?? '',
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                          Text(
+                            contact['phone'] ?? '',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () {
+                        setState(() {
+                          _emergencyContacts.remove(contact);
+                        });
+                        _saveEmergencyContacts();
+                      },
+                    ),
+                  ],
+                ),
+              ))),
           ],
         ),
       ),
@@ -454,7 +555,7 @@ class SafetyCenterScreen extends StatelessWidget {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Add Emergency Contact'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -479,19 +580,27 @@ class SafetyCenterScreen extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
-              // Save contact logic here
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Contact added successfully!'),
-                  backgroundColor: Colors.green,
-                ),
-              );
+              if (nameController.text.isNotEmpty) {
+                setState(() {
+                  _emergencyContacts.add({
+                    'name': nameController.text,
+                    'phone': phoneController.text,
+                  });
+                });
+                _saveEmergencyContacts();
+                Navigator.pop(dialogContext);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Contact added successfully!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
             },
             child: const Text('Add'),
           ),
@@ -535,11 +644,13 @@ class SafetyCenterScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.warning, color: Colors.red),
-            SizedBox(width: 8),
-            Text('Send Emergency Alert'),
+            const Icon(Icons.warning, color: Colors.red),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text('Send Emergency Alert'),
+            ),
           ],
         ),
         content: const Text(
