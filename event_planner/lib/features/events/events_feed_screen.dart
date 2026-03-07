@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'events_provider.dart';
 import '../auth/auth_provider.dart';
 import '../groups/your_groups_screen.dart';
+import '../discover/widgets/discover_header.dart';
 
 class EventsFeedScreen extends StatefulWidget {
   const EventsFeedScreen({super.key});
@@ -13,14 +14,15 @@ class EventsFeedScreen extends StatefulWidget {
   State<EventsFeedScreen> createState() => _EventsFeedScreenState();
 }
 
-class _EventsFeedScreenState extends State<EventsFeedScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _EventsFeedScreenState extends State<EventsFeedScreen> {
   final ScrollController _scrollController = ScrollController();
+  
+  // Track which view is selected: 0 = Discover Events, 1 = Your Groups
+  int _selectedView = 0;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Clear any search state from previous searches before fetching events
       context.read<EventsProvider>().clearSearchState();
@@ -41,7 +43,6 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> with SingleTickerPr
 
   @override
   void dispose() {
-    _tabController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -51,99 +52,119 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> with SingleTickerPr
     final eventsProvider = context.watch<EventsProvider>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Discover Events'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Discover Events'),
-            Tab(text: 'Your Groups'),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
+      backgroundColor: Colors.grey[50],
+      body: Column(
         children: [
-          _buildDiscoverEventsTab(eventsProvider),
-          const YourGroupsScreen(),
+          // Custom Discover Header - replaces AppBar
+          DiscoverHeader(
+            selectedIndex: _selectedView,
+            onDiscoverEventsTap: () {
+              setState(() {
+                _selectedView = 0;
+              });
+            },
+            onYourGroupsTap: () {
+              setState(() {
+                _selectedView = 1;
+              });
+            },
+          ),
+          
+          // Content area - switch between views
+          Expanded(
+            child: _selectedView == 0
+                ? _buildDiscoverEventsTab(eventsProvider)
+                : _buildYourGroupsTab(),
+          ),
         ],
       ),
     );
   }
 
+  Widget _buildYourGroupsTab() {
+    return const YourGroupsScreen();
+  }
+
   Widget _buildDiscoverEventsTab(EventsProvider eventsProvider) {
-    return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          context.go('/events/create');
-        },
-        label: const Text('Create Event'),
-        icon: const Icon(Icons.add),
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          // Clear search state on refresh to get all events
-          context.read<EventsProvider>().clearSearchState();
-          await context.read<EventsProvider>().fetchEvents(refresh: true);
-        },
-        child: eventsProvider.isLoading && eventsProvider.events.isEmpty
-            ? const Center(child: CircularProgressIndicator())
-            : eventsProvider.events.isEmpty
-                ? ListView(
-                    children: [
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32.0),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.event_busy,
-                                size: 80,
-                                color: Colors.grey[400],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No events found',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.grey[600],
+    return Stack(
+      children: [
+        RefreshIndicator(
+          onRefresh: () async {
+            // Clear search state on refresh to get all events
+            context.read<EventsProvider>().clearSearchState();
+            await context.read<EventsProvider>().fetchEvents(refresh: true);
+          },
+          child: eventsProvider.isLoading && eventsProvider.events.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : eventsProvider.events.isEmpty
+                  ? ListView(
+                      children: [
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.event_busy,
+                                  size: 80,
+                                  color: Colors.grey[400],
                                 ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Be the first to create an event!',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[500],
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No events found',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    color: Colors.grey[600],
+                                  ),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Be the first to create an event!',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  )
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
-                    itemCount: eventsProvider.events.length +
-                        (eventsProvider.isLoadingMore ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index >= eventsProvider.events.length) {
-                        return const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(16),
-                            child: CircularProgressIndicator(),
-                          ),
-                        );
-                      }
+                      ],
+                    )
+                  : ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(16),
+                      itemCount: eventsProvider.events.length +
+                          (eventsProvider.isLoadingMore ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index >= eventsProvider.events.length) {
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(16),
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
+                        }
 
-                      final event = eventsProvider.events[index];
-                      return EventCard(event: event);
-                    },
-                  ),
-      ),
+                        final event = eventsProvider.events[index];
+                        return EventCard(event: event);
+                      },
+                    ),
+        ),
+        // Floating Action Button
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: FloatingActionButton.extended(
+            onPressed: () {
+              context.go('/events/create');
+            },
+            label: const Text('Create Event'),
+            icon: const Icon(Icons.add),
+          ),
+        ),
+      ],
     );
   }
 }

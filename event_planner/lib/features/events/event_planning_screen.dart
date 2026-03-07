@@ -242,14 +242,7 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Plan for Event'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: _savePlan,
-            tooltip: 'Save Plan',
-          ),
-        ],
+        title: const Text('Plan Event'),
       ),
       body: eventsProvider.isLoading || _isLoading
           ? const Center(child: CircularProgressIndicator())
