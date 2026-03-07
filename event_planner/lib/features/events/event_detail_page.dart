@@ -1110,15 +1110,41 @@ Join me at this event!
     final isFull = event.maxAttendees != null && 
                    event.currentAttendees >= event.maxAttendees!;
     
+    // If user is registered, show both View Ticket and Plan Event buttons
+    if (event.isUserRegistered) {
+      return Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _AnimatedCTAButton(
+                  label: 'View Ticket',
+                  accentColor: theme.accentColor,
+                  onTap: () => context.push('/events/${event.id}/ticket'),
+                  isLoading: false,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _AnimatedCTAButton(
+                  label: 'Plan Event',
+                  accentColor: Colors.orange,
+                  onTap: () => context.push('/events/${event.id}/plan'),
+                  isLoading: false,
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+    
     String buttonText;
     VoidCallback? onTap;
     
     if (isFull) {
       buttonText = 'Event Full';
       onTap = null;
-    } else if (event.isUserRegistered) {
-      buttonText = 'View Ticket';
-      onTap = () => context.push('/events/${event.id}/ticket');
     } else {
       buttonText = 'Register for the Event';
       onTap = () async {

@@ -10,6 +10,7 @@ import 'dart:io';
 import 'core/api/auth_service.dart';
 import 'core/api/event_service.dart';
 import 'core/utils/storage_helper.dart';
+import 'core/services/push_notification_service.dart';
 import 'features/auth/auth_provider.dart';
 import 'features/events/events_provider.dart';
 import 'features/notifications/notifications_provider.dart';
@@ -21,6 +22,7 @@ import 'features/home/home_screen.dart';
 import 'features/events/create_events_screen.dart';
 import 'features/events/event_detail_page.dart';
 import 'features/events/event_planning_screen.dart';
+import 'features/events/ticket_view_screen.dart';
 import 'features/events/my_events_screen.dart';
 import 'features/search/search_screen.dart';
 import 'features/profile/profile_screen.dart';
@@ -29,6 +31,10 @@ import 'features/notifications/notifications_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Push Notifications (OneSignal)
+  final pushNotificationService = PushNotificationService();
+  await pushNotificationService.initialize();
   
   // Set preferred orientations to portrait only
   await SystemChrome.setPreferredOrientations([
@@ -186,7 +192,7 @@ class EventPlannerApp extends StatelessWidget {
         name: 'ticket',
         builder: (context, state) {
           final eventId = state.pathParameters['id']!;
-          return EventPlanningScreen(eventId: eventId, showTicket: true);
+          return TicketViewScreen(eventId: eventId);
         },
       ),
       GoRoute(

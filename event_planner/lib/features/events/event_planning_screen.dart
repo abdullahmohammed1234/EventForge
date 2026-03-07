@@ -7,6 +7,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
+import 'dart:convert';
 import 'events_provider.dart';
 import '../safety/safety_center_screen.dart';
 
@@ -39,6 +40,9 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
   // Sample contacts for the event
   List<Map<String, String>> _eventContacts = [];
   
+  // Key for storing contacts list
+  static const String _contactsKey = 'event_contacts_';
+  
   final TextEditingController _transportationController = TextEditingController();
   final TextEditingController _foodController = TextEditingController();
   final TextEditingController _musicController = TextEditingController();
@@ -69,6 +73,13 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
         _musicController.text = _musicPlan;
         _tripController.text = _tripPlan;
         _contactsController.text = _contacts;
+        
+        // Load contacts from SharedPreferences
+        final contactsJson = prefs.getString('${_contactsKey}${widget.eventId}');
+        if (contactsJson != null && contactsJson.isNotEmpty) {
+          final List<dynamic> decoded = json.decode(contactsJson);
+          _eventContacts = decoded.map((e) => Map<String, String>.from(e)).toList();
+        }
         
         _isLoading = false;
       });
@@ -204,6 +215,10 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
     await prefs.setString('trip_${widget.eventId}', _tripController.text);
     await prefs.setString('contacts_${widget.eventId}', _contactsController.text);
     
+    // Save contacts list to SharedPreferences
+    final contactsJson = json.encode(_eventContacts);
+    await prefs.setString('${_contactsKey}${widget.eventId}', contactsJson);
+    
     setState(() {
       _transportationPlan = _transportationController.text;
       _foodPlan = _foodController.text;
@@ -245,14 +260,6 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Event Info Card
-                      _buildEventInfoCard(event),
-                      const SizedBox(height: 24),
-
-                      // QR Code Section
-                      _buildQRCodeSection(event),
-                      const SizedBox(height: 24),
-
                       // Choose Transportation Section
                       _buildTransportationSection(event),
                       const SizedBox(height: 24),
@@ -267,36 +274,6 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
 
                       // Action Buttons Section
                       _buildActionButtonsSection(event),
-                      const SizedBox(height: 24),
-
-                      // Food Section
-                      _buildPlanningSection(
-                        title: 'Food',
-                        icon: Icons.restaurant,
-                        controller: _foodController,
-                        hintText: 'Meal plans, restaurants nearby, snacks to bring',
-                        savedText: _foodPlan,
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Music Section
-                      _buildPlanningSection(
-                        title: 'Music',
-                        icon: Icons.music_note,
-                        controller: _musicController,
-                        hintText: 'Playlist preferences, songs to add',
-                        savedText: _musicPlan,
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Trip Plan Section
-                      _buildPlanningSection(
-                        title: 'Trip Plan',
-                        icon: Icons.map,
-                        controller: _tripController,
-                        hintText: 'Itinerary, activities, things to do',
-                        savedText: _tripPlan,
-                      ),
                       const SizedBox(height: 32),
                     ],
                   ),
@@ -879,12 +856,15 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
           ElevatedButton(
             onPressed: () {
               if (nameController.text.isNotEmpty) {
+                final newContact = {
+                  'name': nameController.text,
+                  'phone': phoneController.text,
+                };
                 setState(() {
-                  _eventContacts.add({
-                    'name': nameController.text,
-                    'phone': phoneController.text,
-                  });
+                  _eventContacts.add(newContact);
                 });
+                // Automatically save contacts when added
+                _saveContactsImmediately(newContact);
               }
               Navigator.pop(context);
             },
@@ -1136,5 +1116,26 @@ ${_estimatedDistance.isNotEmpty ? 'Distance: $_estimatedDistance' : ''}
 ${_estimatedTime.isNotEmpty ? 'Estimated Time: $_estimatedTime' : ''}
 ''';
     Share.share(details, subject: 'Trip Details - ${event.title}');
+  }
+  
+  // Save contacts immediately when added
+  Future<void> _saveContactsImmediately(Map<String, String> newContact) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final contactsJson = json.encode(_eventContacts);
+      await prefs.setString('${_contactsKey}${widget.eventId}', contactsJson);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Contact added successfully!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      // Silently fail
+    }
   }
 }
