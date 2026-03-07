@@ -6,7 +6,9 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:share_plus/share_plus.dart';
 import 'events_provider.dart';
+import '../safety/safety_center_screen.dart';
 
 class EventPlanningScreen extends StatefulWidget {
   final String eventId;
@@ -28,6 +30,14 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
   String _tripPlan = '';
   String _contacts = '';
   bool _isLoading = true;
+  
+  // New fields for transportation choices
+  String _selectedTransportation = ''; // 'car', 'transit', 'bike'
+  String _estimatedDistance = '';
+  String _estimatedTime = '';
+  
+  // Sample contacts for the event
+  List<Map<String, String>> _eventContacts = [];
   
   final TextEditingController _transportationController = TextEditingController();
   final TextEditingController _foodController = TextEditingController();
@@ -243,14 +253,20 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
                       _buildQRCodeSection(event),
                       const SizedBox(height: 24),
 
-                      // Transportation Section
-                      _buildPlanningSection(
-                        title: 'Transportation',
-                        icon: Icons.directions_car,
-                        controller: _transportationController,
-                        hintText: 'How will you get there? (e.g., drive, bus, uber)',
-                        savedText: _transportationPlan,
-                      ),
+                      // Choose Transportation Section
+                      _buildTransportationSection(event),
+                      const SizedBox(height: 24),
+
+                      // Add Contacts Section
+                      _buildContactsSection(event),
+                      const SizedBox(height: 24),
+
+                      // Destination + Estimated Time Section
+                      _buildDestinationSection(event),
+                      const SizedBox(height: 24),
+
+                      // Action Buttons Section
+                      _buildActionButtonsSection(event),
                       const SizedBox(height: 24),
 
                       // Food Section
@@ -280,16 +296,6 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
                         controller: _tripController,
                         hintText: 'Itinerary, activities, things to do',
                         savedText: _tripPlan,
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Contacts Section
-                      _buildPlanningSection(
-                        title: 'Contacts',
-                        icon: Icons.contacts,
-                        controller: _contactsController,
-                        hintText: 'Who is going with you? (name, phone, email)',
-                        savedText: _contacts,
                       ),
                       const SizedBox(height: 32),
                     ],
@@ -632,5 +638,503 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
         ),
       ),
     );
+  }
+
+  // New method: Choose Transportation Section
+  Widget _buildTransportationSection(Event event) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.directions_car, color: Theme.of(context).primaryColor),
+                const SizedBox(width: 8),
+                const Text(
+                  'Choose Transportation',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildTransportOption(
+                    icon: Icons.directions_car,
+                    label: 'Car',
+                    value: 'car',
+                    color: Colors.blue,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildTransportOption(
+                    icon: Icons.train,
+                    label: 'Transit',
+                    value: 'transit',
+                    color: Colors.orange,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildTransportOption(
+                    icon: Icons.directions_bike,
+                    label: 'Bike',
+                    value: 'bike',
+                    color: Colors.green,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTransportOption({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    final isSelected = _selectedTransportation == value;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedTransportation = value;
+        });
+        // Update the transportation plan
+        _transportationController.text = label;
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.1) : Colors.grey[100],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? color : Colors.grey[300]!,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: isSelected ? color : Colors.grey, size: 28),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? color : Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // New method: Add Contacts Section
+  Widget _buildContactsSection(Event event) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.contacts, color: Theme.of(context).primaryColor),
+                const SizedBox(width: 8),
+                const Text(
+                  'Add Contacts',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'People joining you:',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Display sample contacts
+            if (_eventContacts.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.person_add, color: Colors.grey),
+                    SizedBox(width: 12),
+                    Text(
+                      'No contacts added yet',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ],
+                ),
+              )
+            else
+              ...(_eventContacts.map((contact) => Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        const CircleAvatar(
+                          radius: 16,
+                          child: Icon(Icons.person, size: 18),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                contact['name'] ?? '',
+                                style: const TextStyle(fontWeight: FontWeight.w500),
+                              ),
+                              Text(
+                                contact['phone'] ?? '',
+                                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ))),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _showAddContactDialog(event),
+                icon: const Icon(Icons.add),
+                label: const Text('Add Contact'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddContactDialog(Event event) {
+    final nameController = TextEditingController();
+    final phoneController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Contact'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Name',
+                prefixIcon: Icon(Icons.person),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: phoneController,
+              decoration: const InputDecoration(
+                labelText: 'Phone Number',
+                prefixIcon: Icon(Icons.phone),
+              ),
+              keyboardType: TextInputType.phone,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (nameController.text.isNotEmpty) {
+                setState(() {
+                  _eventContacts.add({
+                    'name': nameController.text,
+                    'phone': phoneController.text,
+                  });
+                });
+              }
+              Navigator.pop(context);
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // New method: Destination + Estimated Time Section
+  Widget _buildDestinationSection(Event event) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.location_on, color: Theme.of(context).primaryColor),
+                const SizedBox(width: 8),
+                const Text(
+                  'Destination + Estimated Time',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Location
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.place, color: Colors.red),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          event.address ?? event.city,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        if (event.address != null)
+                          Text(
+                            event.city,
+                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Distance and Time
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.straighten, color: Colors.blue),
+                        const SizedBox(height: 4),
+                        Text(
+                          _estimatedDistance.isEmpty ? '--' : _estimatedDistance,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
+                          ),
+                        ),
+                        const Text(
+                          'Distance',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.green[50],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.schedule, color: Colors.green),
+                        const SizedBox(height: 4),
+                        Text(
+                          _estimatedTime.isEmpty ? '--' : _estimatedTime,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
+                        ),
+                        const Text(
+                          'Est. Time',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Google Maps API declaration
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.info_outline, size: 14, color: Colors.grey),
+                  SizedBox(width: 4),
+                  Text(
+                    'Estimated via Google Maps API',
+                    style: TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // New method: Action Buttons Section
+  Widget _buildActionButtonsSection(Event event) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Quick Actions',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Add to Google Calendar Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _addToGoogleCalendar(event),
+                icon: const Icon(Icons.calendar_month),
+                label: const Text('Add to Google Calendar'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Set Up Safety Features Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _navigateToSafetyCenter(event),
+                icon: const Icon(Icons.security),
+                label: const Text('Set Up Safety Features'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Share Trip Details Button
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _shareTripDetails(event),
+                icon: const Icon(Icons.share),
+                label: const Text('Share Trip Details'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addToGoogleCalendar(Event event) async {
+    final title = Uri.encodeComponent(event.title);
+    final details = Uri.encodeComponent('Event: ${event.title}\nLocation: ${event.address ?? event.city}');
+    final location = Uri.encodeComponent('${event.address ?? event.city}');
+    final startTime = event.startTime.toUtc().toIso8601String().replaceAll('-', '').replaceAll(':', '').split('.')[0];
+    final endTime = event.endTime!.toUtc().toIso8601String().replaceAll('-', '').replaceAll(':', '').split('.')[0];
+    
+    final url = Uri.parse(
+      'https://calendar.google.com/calendar/render?action=TEMPLATE&text=$title&details=$details&location=$location&dates=$startTime/$endTime'
+    );
+    
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open Google Calendar')),
+        );
+      }
+    }
+  }
+
+  void _navigateToSafetyCenter(Event event) {
+    context.push('/safety/${event.id}', extra: {'eventName': event.title});
+  }
+
+  void _shareTripDetails(Event event) {
+    final details = '''
+Event: ${event.title}
+Date: ${_formatDate(event.startTime)}
+Location: ${event.address ?? event.city}
+Transportation: ${_selectedTransportation.isEmpty ? 'Not selected' : _selectedTransportation}
+${_estimatedDistance.isNotEmpty ? 'Distance: $_estimatedDistance' : ''}
+${_estimatedTime.isNotEmpty ? 'Estimated Time: $_estimatedTime' : ''}
+''';
+    Share.share(details, subject: 'Trip Details - ${event.title}');
   }
 }

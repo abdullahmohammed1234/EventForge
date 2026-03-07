@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'events_provider.dart';
 import '../auth/auth_provider.dart';
+import '../groups/your_groups_screen.dart';
 
 class EventsFeedScreen extends StatefulWidget {
   const EventsFeedScreen({super.key});
@@ -12,12 +13,14 @@ class EventsFeedScreen extends StatefulWidget {
   State<EventsFeedScreen> createState() => _EventsFeedScreenState();
 }
 
-class _EventsFeedScreenState extends State<EventsFeedScreen> {
+class _EventsFeedScreenState extends State<EventsFeedScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Clear any search state from previous searches before fetching events
       context.read<EventsProvider>().clearSearchState();
@@ -38,6 +41,7 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
 
   @override
   void dispose() {
+    _tabController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -49,7 +53,26 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Discover Events'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Discover Events'),
+            Tab(text: 'Your Groups'),
+          ],
+        ),
       ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildDiscoverEventsTab(eventsProvider),
+          const YourGroupsScreen(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDiscoverEventsTab(EventsProvider eventsProvider) {
+    return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           context.go('/events/create');
