@@ -108,6 +108,29 @@ class AuthService {
     }
   }
 
+  Future<http.Response> updateProfile({
+    required String token,
+    String? displayName,
+    String? city,
+  }) async {
+    try {
+      final response = await _client.put(
+        Uri.parse('$baseUrl${Endpoints.profile}'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          if (displayName != null) 'displayName': displayName,
+          if (city != null) 'city': city,
+        }),
+      ).timeout(const Duration(seconds: 15));
+      return response;
+    } catch (e) {
+      throw Exception('Update profile failed: $e');
+    }
+  }
+
   void dispose() {
     _client.close();
   }

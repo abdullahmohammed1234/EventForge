@@ -55,6 +55,7 @@ class Endpoints {
   static const String login = '/auth/login';
   static const String logout = '/auth/logout';
   static const String me = '/auth/me';
+  static const String profile = '/auth/profile';
   static const String events = '/events';
   static const String myEvents = '/events/my-events';
   static const String registeredEvents = '/events/registered';
