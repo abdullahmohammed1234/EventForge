@@ -197,6 +197,47 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<bool> updateProfile({
+    String? displayName,
+    String? city,
+  }) async {
+    if (_token == null) return false;
+    
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final response = await authService.updateProfile(
+        token: _token!,
+        displayName: displayName,
+        city: city,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        _user = User.fromJson(data['data']);
+        
+        await storageHelper.saveUserData(jsonEncode(_user!.toJson()));
+        
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        final data = jsonDecode(response.body);
+        _error = data['error'] ?? 'Update failed';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<bool> uploadAvatar(File imageFile) async {
     if (_token == null) return false;
     

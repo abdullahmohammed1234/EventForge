@@ -1,12 +1,9 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../auth/auth_provider.dart';
-import '../notifications/notifications_provider.dart';
-import '../../core/config/app_config.dart';
+import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -16,64 +13,18 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  Uint8List? _selectedImage;
   final ImagePicker _picker = ImagePicker();
-  bool _isUploading = false;
 
-  Future<void> _pickImage() async {
-    try {
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 800,
-        maxHeight: 800,
-        imageQuality: 85,
-      );
-
-      if (image != null && mounted) {
-        _uploadImage(File(image.path));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error picking image: $e')),
-        );
-      }
-    }
-  }
-
-  Future<void> _uploadImage(File imageFile) async {
+Future<void> _pickImage() async {
+  final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+  if (image != null) {
+    final bytes = await image.readAsBytes();
     setState(() {
-      _isUploading = true;
+      _selectedImage = bytes;
     });
-
-    final authProvider = context.read<AuthProvider>();
-    final success = await authProvider.uploadAvatar(imageFile);
-
-    if (mounted) {
-      setState(() {
-        _isUploading = false;
-      });
-
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile picture updated!')),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(authProvider.error ?? 'Upload failed')),
-        );
-      }
-    }
   }
-
-  String _getFullAvatarUrl(String? avatarUrl) {
-    if (avatarUrl == null || avatarUrl.isEmpty) {
-      return '';
-    }
-    if (avatarUrl.startsWith('http')) {
-      return avatarUrl;
-    }
-    return '${AppConfig.apiBaseUrl.replaceAll('/api', '')}$avatarUrl';
-  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -83,124 +34,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
-        actions: [
-          Consumer<NotificationsProvider>(
-            builder: (context, provider, _) {
-              return Stack(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.notifications_outlined),
-                    onPressed: () {
-                      context.push('/notifications');
-                    },
-                  ),
-                  if (provider.unreadCount > 0)
-                    Positioned(
-                      right: 8,
-                      top: 8,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 18,
-                          minHeight: 18,
-                        ),
-                        child: Text(
-                          '${provider.unreadCount}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                ],
-              );
-            },
-          ),
-        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
             children: [
-              Stack(
-                children: [
-                  GestureDetector(
-                    onTap: _isUploading ? null : _pickImage,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Colors.blue,
-                        backgroundImage: user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty
-                            ? CachedNetworkImageProvider(_getFullAvatarUrl(user.avatarUrl))
-                            : null,
-                        child: user?.avatarUrl == null || user!.avatarUrl!.isEmpty
-                            ? const Icon(
-                                Icons.person,
-                                size: 60,
-                                color: Colors.white,
-                              )
-                            : null,
-                      ),
-                    ),
-                  ),
-                  if (_isUploading)
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.black.withOpacity(0.3),
-                        ),
-                        child: const Center(
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.blue,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.camera_alt,
-                        size: 20,
-                        color: Colors.white.withOpacity(0.9),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _isUploading ? 'Uploading...' : 'Tap to change photo',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[500],
-                ),
-              ),
+              GestureDetector(
+  onTap: _pickImage,
+  child: CircleAvatar(
+    radius: 50,
+    backgroundColor: Colors.blue,
+    backgroundImage: _selectedImage != null ? MemoryImage(_selectedImage!) : null,
+    child: _selectedImage == null
+        ? const Icon(Icons.person, size: 60, color: Colors.white)
+        : null,
+  ),
+),
               const SizedBox(height: 16),
               Text(
                 user?.displayName ?? user?.email ?? 'User',
@@ -279,6 +129,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () => _showEditProfileDialog(context, user),
+                icon: const Icon(Icons.edit),
+                label: const Text('Edit Profile'),
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton.icon(
+                onPressed: () => context.push('/my-events'),
+                icon: const Icon(Icons.event),
+                label: const Text('My Events'),
+              ),
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
@@ -317,7 +179,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
+  void _showEditProfileDialog(BuildContext context, user) {
+  final nameController = TextEditingController(text: user?.displayName ?? '');
+  final cityController = TextEditingController(text: user?.city ?? '');
 
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Edit Profile'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: nameController,
+            decoration: const InputDecoration(
+              labelText: 'Name',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: cityController,
+            decoration: const InputDecoration(
+              labelText: 'City',
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+  onPressed: () async {
+    final authProvider = context.read<AuthProvider>();
+    await authProvider.updateProfile(
+      displayName: nameController.text,
+      city: cityController.text,
+    );
+    if (context.mounted) {
+      Navigator.pop(context);
+    }
+  },
+  child: const Text('Save'),
+),
+      ],
+    ),
+  );
+}
   String _formatDate(String dateString) {
     try {
       final date = DateTime.parse(dateString);
