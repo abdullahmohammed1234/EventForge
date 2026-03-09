@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../core/utils/storage_helper.dart';
 import 'auth_provider.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -29,13 +31,23 @@ class _SplashScreenState extends State<SplashScreen> {
     // Wait for both minimum duration and auth check
     await Future.wait([minSplashDuration, authCheck]);
 
-    if (mounted) {
-      // Navigate based on auth status: home if logged in, landing if not
-      if (authProvider.isAuthenticated) {
-        context.go('/home');
-      } else {
-        context.go('/landing');
-      }
+    if (!mounted) return;
+    
+    // Check if onboarding has been completed
+    final storage = FlutterSecureStorage();
+    final storageHelper = StorageHelper(storage);
+    final isOnboardingComplete = await storageHelper.isOnboardingComplete();
+    
+    // Navigate based on auth status and onboarding completion
+    if (!isOnboardingComplete) {
+      // First time user - show onboarding
+      context.go('/onboarding');
+    } else if (authProvider.isAuthenticated) {
+      // Already authenticated - go to home
+      context.go('/home');
+    } else {
+      // Not authenticated - go to register
+      context.go('/register');
     }
   }
 
