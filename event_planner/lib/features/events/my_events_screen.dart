@@ -241,6 +241,52 @@ class _RegisteredEventCard extends StatelessWidget {
     return icons[category] ?? Icons.event;
   }
 
+  Widget _buildRegisteredBadge() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.green.withOpacity(0.1),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(12),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.check_circle,
+            size: 16,
+            color: Colors.green,
+          ),
+          const SizedBox(width: 8),
+          const Text(
+            'REGISTERED',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.green,
+            ),
+          ),
+          const Spacer(),
+          Icon(
+            _getCategoryIcon(event.category),
+            size: 16,
+            color: _getCategoryColor(event.category),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            event.category.toUpperCase(),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: _getCategoryColor(event.category),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -255,50 +301,24 @@ class _RegisteredEventCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Registered badge
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
+            // Event Image or Registered badge
+            if (event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty)
+              ClipRRect(
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(12),
                 ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.check_circle,
-                    size: 16,
-                    color: Colors.green,
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'REGISTERED',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.green,
-                    ),
-                  ),
-                  const Spacer(),
-                  Icon(
-                    _getCategoryIcon(event.category),
-                    size: 16,
-                    color: _getCategoryColor(event.category),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    event.category.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: _getCategoryColor(event.category),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                child: Image.network(
+                  event.coverImageUrl!,
+                  height: 150,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return _buildRegisteredBadge();
+                  },
+                ),
+              )
+            else
+              _buildRegisteredBadge(),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -472,6 +492,52 @@ class _SavedEventCard extends StatelessWidget {
     return icons[category] ?? Icons.event;
   }
 
+  Widget _buildSavedBadge() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.blue.withOpacity(0.1),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(12),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.bookmark,
+            size: 16,
+            color: Colors.blue,
+          ),
+          const SizedBox(width: 8),
+          const Text(
+            'SAVED',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.blue,
+            ),
+          ),
+          const Spacer(),
+          Icon(
+            _getCategoryIcon(event.category),
+            size: 16,
+            color: _getCategoryColor(event.category),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            event.category.toUpperCase(),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: _getCategoryColor(event.category),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -486,50 +552,24 @@ class _SavedEventCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Saved badge
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
+            // Event Image or Saved badge
+            if (event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty)
+              ClipRRect(
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(12),
                 ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.bookmark,
-                    size: 16,
-                    color: Colors.blue,
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'SAVED',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.blue,
-                    ),
-                  ),
-                  const Spacer(),
-                  Icon(
-                    _getCategoryIcon(event.category),
-                    size: 16,
-                    color: _getCategoryColor(event.category),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    event.category.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: _getCategoryColor(event.category),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                child: Image.network(
+                  event.coverImageUrl!,
+                  height: 150,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return _buildSavedBadge();
+                  },
+                ),
+              )
+            else
+              _buildSavedBadge(),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
