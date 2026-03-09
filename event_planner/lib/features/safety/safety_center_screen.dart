@@ -632,7 +632,10 @@ class _SafetyCenterScreenState extends State<SafetyCenterScreen> {
                 ),
               );
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('I am Safe'),
           ),
         ],
@@ -671,11 +674,15 @@ class _SafetyCenterScreenState extends State<SafetyCenterScreen> {
                 ),
               );
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Send Alert'),
           ),
         ],
       ),
     );
   }
+
 }
