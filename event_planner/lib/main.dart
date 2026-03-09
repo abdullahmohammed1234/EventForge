@@ -17,7 +17,7 @@ import 'features/notifications/notifications_provider.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/register_screen.dart';
 import 'features/auth/splash_screen.dart';
-import 'features/auth/landing_screen.dart';
+import 'features/auth/onboarding_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/events/create_events_screen.dart';
 import 'features/events/event_detail_page.dart';
@@ -142,9 +142,9 @@ class EventPlannerApp extends StatelessWidget {
         builder: (context, state) => const SplashScreen(),
       ),
       GoRoute(
-        path: '/landing',
-        name: 'landing',
-        builder: (context, state) => const LandingScreen(),
+        path: '/onboarding',
+        name: 'onboarding',
+        builder: (context, state) => const OnboardingScreen(),
       ),
       GoRoute(
         path: '/login',
@@ -252,10 +252,10 @@ class EventPlannerApp extends StatelessWidget {
       final isLoginPage = state.matchedLocation == '/login';
       final isRegisterPage = state.matchedLocation == '/register';
       final isSplashPage = state.matchedLocation == '/';
-      final isLandingPage = state.matchedLocation == '/landing';
+      final isOnboardingPage = state.matchedLocation == '/onboarding';
 
       // Allow access to splash, landing, login, and register pages without auth
-      if (!isAuthenticated && !isLoginPage && !isRegisterPage && !isSplashPage && !isLandingPage) {
+      if (!isAuthenticated && !isLoginPage && !isRegisterPage && !isSplashPage && !isOnboardingPage) {
         return '/login';
       }
 

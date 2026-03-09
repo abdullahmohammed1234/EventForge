@@ -80,4 +80,7 @@ flutter:
 
   assets:
     - assets/
+    - assets/image 42.png
+    - assets/image 49.png
+    - assets/image 50.png
     - .env
