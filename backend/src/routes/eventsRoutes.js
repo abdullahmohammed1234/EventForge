@@ -61,6 +61,41 @@ router.get('/registered', auth, asyncWrapper(eventsController.getRegisteredEvent
 router.get('/my-events', auth, asyncWrapper(eventsController.getMyEvents));
 
 /**
+ * @desc    Get saved events
+ * @route   GET /api/events/saved
+ * @access  Private
+ */
+router.get('/saved', auth, asyncWrapper(eventsController.getSavedEvents));
+
+/**
+ * @desc    Register for an event
+ * @route   POST /api/events/:id/register
+ * @access  Private
+ */
+router.post('/:id/register', auth, asyncWrapper(eventsController.registerForEvent));
+
+/**
+ * @desc    Unregister from an event
+ * @route   POST /api/events/:id/unregister
+ * @access  Private
+ */
+router.post('/:id/unregister', auth, asyncWrapper(eventsController.unregisterFromEvent));
+
+/**
+ * @desc    Save an event
+ * @route   POST /api/events/:id/save
+ * @access  Private
+ */
+router.post('/:id/save', auth, asyncWrapper(eventsController.saveEvent));
+
+/**
+ * @desc    Unsave an event
+ * @route   POST /api/events/:id/unsave
+ * @access  Private
+ */
+router.post('/:id/unsave', auth, asyncWrapper(eventsController.unsaveEvent));
+
+/**
  * @desc    Get single event by ID
  * @route   GET /api/events/:id
  * @access  Public
@@ -214,24 +249,10 @@ router.put(
 router.delete('/:id', auth, asyncWrapper(eventsController.deleteEvent));
 
 /**
- * @desc    Register for an event
- * @route   POST /api/events/:id/register
+ * @desc    Upload event cover image
+ * @route   POST /api/events/upload-cover
  * @access  Private
  */
-router.post('/:id/register', auth, asyncWrapper(eventsController.registerForEvent));
-
-/**
- * @desc    Cancel registration for an event
- * @route   POST /api/events/:id/unregister
- * @access  Private
- */
-router.post('/:id/unregister', auth, asyncWrapper(eventsController.unregisterFromEvent));
-
-/**
- * @desc    Get events user has registered for
- * @route   GET /api/events/registered
- * @access  Private
- */
-router.get('/registered', auth, asyncWrapper(eventsController.getRegisteredEvents));
+router.post('/upload-cover', auth, asyncWrapper(eventsController.uploadEventCover));
 
 module.exports = router;

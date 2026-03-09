@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../core/api/auth_service.dart';
+import '../../core/config/app_config.dart';
 import '../../core/utils/storage_helper.dart';
 
 class User {
@@ -10,6 +12,7 @@ class User {
   final String? displayName;
   final String? city;
   final String? createdAt;
+  final String? avatarUrl;
 
   User({
     required this.id,
@@ -17,6 +20,7 @@ class User {
     this.displayName,
     this.city,
     this.createdAt,
+    this.avatarUrl,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -26,6 +30,7 @@ class User {
       displayName: json['displayName'],
       city: json['city'],
       createdAt: json['createdAt'],
+      avatarUrl: json['avatarUrl'],
     );
   }
 
@@ -36,6 +41,7 @@ class User {
       'displayName': displayName,
       'city': city,
       'createdAt': createdAt,
+      'avatarUrl': avatarUrl,
     };
   }
 }
@@ -56,6 +62,7 @@ class AuthProvider with ChangeNotifier {
     required this.storage,
     required this.storageHelper,
   }) {
+    debugPrint('AuthProvider initialized');
     _checkAuthStatus();
   }
 
@@ -94,7 +101,9 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      debugPrint('Attempting login to: ${authService.baseUrl}${Endpoints.login}');
       final response = await authService.login(email: email, password: password);
+      debugPrint('Login response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -115,6 +124,7 @@ class AuthProvider with ChangeNotifier {
         return false;
       }
     } catch (e) {
+      debugPrint('Login error: $e');
       _error = e.toString().replaceAll('Exception: ', '');
       _isLoading = false;
       notifyListeners();
@@ -185,5 +195,93 @@ class AuthProvider with ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  Future<bool> updateProfile({
+    String? displayName,
+    String? city,
+  }) async {
+    if (_token == null) return false;
+    
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final response = await authService.updateProfile(
+        token: _token!,
+        displayName: displayName,
+        city: city,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        _user = User.fromJson(data['data']);
+        
+        await storageHelper.saveUserData(jsonEncode(_user!.toJson()));
+        
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        final data = jsonDecode(response.body);
+        _error = data['error'] ?? 'Update failed';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> uploadAvatar(File imageFile) async {
+    if (_token == null) return false;
+    
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final response = await authService.uploadAvatar(
+        token: _token!,
+        imageFile: imageFile,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final avatarUrl = data['data']['avatarUrl'];
+        
+        // Update user with new avatar URL
+        _user = User(
+          id: _user!.id,
+          email: _user!.email,
+          displayName: _user!.displayName,
+          city: _user!.city,
+          createdAt: _user!.createdAt,
+          avatarUrl: avatarUrl,
+        );
+        
+        await storageHelper.saveUserData(jsonEncode(_user!.toJson()));
+        
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        final data = jsonDecode(response.body);
+        _error = data['message'] ?? 'Upload failed';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
   }
 }

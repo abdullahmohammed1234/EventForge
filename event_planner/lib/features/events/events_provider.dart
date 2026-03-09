@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -53,6 +54,148 @@ class SubEvent {
   }
 }
 
+/// Organizer model for event detail
+class Organizer {
+  final String? id;
+  final String name;
+  final String? type;
+  final String? avatarUrl;
+
+  Organizer({
+    this.id,
+    required this.name,
+    this.type,
+    this.avatarUrl,
+  });
+
+  factory Organizer.fromJson(Map<String, dynamic> json) {
+    return Organizer(
+      id: json['id'] ?? json['_id'],
+      name: json['displayName'] ?? json['name'] ?? 'Event Organizer',
+      type: json['type'],
+      avatarUrl: json['avatarUrl'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'type': type,
+      'avatarUrl': avatarUrl,
+    };
+  }
+}
+
+/// Location model for event
+class EventLocation {
+  final String? name;
+  final String? address;
+  final double? latitude;
+  final double? longitude;
+
+  EventLocation({
+    this.name,
+    this.address,
+    this.latitude,
+    this.longitude,
+  });
+
+  factory EventLocation.fromJson(Map<String, dynamic> json) {
+    // Handle nested location object
+    final locationData = json['location'] is Map ? json['location'] : json;
+    
+    double? lat;
+    double? lng;
+    
+    if (locationData != null && locationData['coordinates'] != null) {
+      final coords = locationData['coordinates'];
+      if (coords is List && coords.length >= 2) {
+        lng = (coords[0] as num).toDouble();
+        lat = (coords[1] as num).toDouble();
+        // Only use coordinates if they are valid (not 0,0)
+        if (lat == 0 && lng == 0) {
+          lat = null;
+          lng = null;
+        }
+      }
+    }
+    
+    return EventLocation(
+      name: locationData?['name'] ?? json['city'],
+      address: json['address'],
+      latitude: lat ?? json['latitude'],
+      longitude: lng ?? json['longitude'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'address': address,
+      'latitude': latitude,
+      'longitude': longitude,
+    };
+  }
+}
+
+/// Contact info for event
+class EventContact {
+  final String? phone;
+  final String? email;
+
+  EventContact({
+    this.phone,
+    this.email,
+  });
+
+  factory EventContact.fromJson(Map<String, dynamic> json) {
+    final contactData = json['contact'] is Map ? json['contact'] : json;
+    return EventContact(
+      phone: contactData?['phone'],
+      email: contactData?['email'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'phone': phone,
+      'email': email,
+    };
+  }
+}
+
+/// Attendee model
+class Attendee {
+  final String id;
+  final String? name;
+  final String? avatarUrl;
+
+  Attendee({
+    required this.id,
+    this.name,
+    this.avatarUrl,
+  });
+
+  factory Attendee.fromJson(Map<String, dynamic> json) {
+    final userData = json['user'] is Map ? json['user'] : json;
+    final avatarUrl = userData?['avatarUrl'];
+    return Attendee(
+      id: userData?['_id'] ?? userData?['id'] ?? json['id'] ?? '',
+      name: userData?['displayName'] ?? userData?['name'],
+      avatarUrl: avatarUrl is String && avatarUrl.isNotEmpty ? avatarUrl : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'avatarUrl': avatarUrl,
+    };
+  }
+}
+
 class Event {
   final String id;
   final String title;
@@ -71,6 +214,21 @@ class Event {
   final DateTime createdAt;
   final List<SubEvent> subEvents;
   final bool isUserRegistered;
+  final String? registrationId; // Unique QR code ID
+  final bool isUserSaved; // Whether the user has saved this event
+  
+  // New fields for dynamic event detail screen
+  final String? coverImageUrl;
+  final List<String> tags;
+  final Organizer? organizer;
+  final EventContact? contact;
+  final List<Attendee> attendees;
+  final int attendeeCount;
+  final List<String> highlights;
+  final bool isFree;
+  final double? price;
+  final EventLocation? location;
+  final bool? isUserOrganizer;
 
   Event({
     required this.id,
@@ -90,6 +248,19 @@ class Event {
     required this.createdAt,
     this.subEvents = const [],
     this.isUserRegistered = false,
+    this.registrationId,
+    this.isUserSaved = false,
+    this.coverImageUrl,
+    this.tags = const [],
+    this.organizer,
+    this.contact,
+    this.attendees = const [],
+    this.attendeeCount = 0,
+    this.highlights = const [],
+    this.isFree = true,
+    this.price,
+    this.location,
+    this.isUserOrganizer,
   });
 
   factory Event.fromJson(Map<String, dynamic> json) {
@@ -100,6 +271,63 @@ class Event {
           .toList();
     }
     
+    // Extract and validate coordinates
+    double? lat;
+    double? lng;
+    if (json['location'] != null && json['location']['coordinates'] != null) {
+      final coords = json['location']['coordinates'];
+      // Validate coordinates are not the default [0, 0]
+      lng = (coords[0] as num).toDouble();
+      lat = (coords[1] as num).toDouble();
+      // Only use coordinates if they are valid (not 0,0)
+      if (lat == 0 && lng == 0) {
+        lat = null;
+        lng = null;
+      }
+    }
+    
+    // Build organizer from createdBy field
+    Organizer? organizer;
+    if (json['createdBy'] != null) {
+      final creator = json['createdBy'];
+      final avatarUrl = creator['avatarUrl'];
+      organizer = Organizer(
+        id: creator['_id'] ?? creator['id'],
+        name: creator['displayName'] ?? 'Event Organizer',
+        type: creator['type'] ?? creator['city'] != null ? 'Local Community' : null,
+        avatarUrl: avatarUrl is String && avatarUrl.isNotEmpty ? avatarUrl : null,
+      );
+    }
+    
+    // Build attendees list
+    List<Attendee> attendeesList = [];
+    if (json['attendees'] != null) {
+      attendeesList = (json['attendees'] as List)
+          .map((e) => Attendee.fromJson(e))
+          .toList();
+    }
+    
+    // Extract tags
+    List<String> tagsList = [];
+    if (json['tags'] != null) {
+      tagsList = (json['tags'] as List).map((e) => e.toString()).toList();
+    }
+    
+    // Extract highlights
+    List<String> highlightsList = [];
+    if (json['highlights'] != null) {
+      highlightsList = (json['highlights'] as List).map((e) => e.toString()).toList();
+    }
+    
+    // Build location object
+    final eventLocation = EventLocation.fromJson(json);
+    
+    // Build contact object
+    final eventContact = EventContact.fromJson(json);
+    
+    // Determine if event is free
+    final isFree = json['isFree'] == true || json['price'] == null || json['price'] == 0;
+    
     return Event(
       id: json['id'] ?? json['_id'],
       title: json['title'],
@@ -107,17 +335,32 @@ class Event {
       category: json['category'] ?? 'other',
       city: json['city'],
       address: json['address'],
-      latitude: json['location'] != null ? (json['location']['coordinates'][1] as num).toDouble() : null,
-      longitude: json['location'] != null ? (json['location']['coordinates'][0] as num).toDouble() : null,
+      latitude: lat,
+      longitude: lng,
       startTime: DateTime.parse(json['startTime']),
       endTime: json['endTime'] != null ? DateTime.parse(json['endTime']) : null,
       maxAttendees: json['maxAttendees'] != null ? (json['maxAttendees'] as num).toInt() : null,
       currentAttendees: (json['currentAttendees'] as num?)?.toInt() ?? 0,
       createdBy: json['createdBy']?['id'] ?? json['createdBy']?['_id'] ?? json['createdBy'] ?? '',
       creatorName: json['createdBy']?['displayName'],
-      createdAt: DateTime.parse(json['createdAt']),
+      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
       subEvents: subEventsList,
       isUserRegistered: json['isUserRegistered'] ?? false,
+      registrationId: json['registrationId'],
+      isUserSaved: json['isUserSaved'] ?? false,
+      coverImageUrl: (json['coverImageUrl'] is String && json['coverImageUrl'].isNotEmpty) 
+          ? json['coverImageUrl'] 
+          : null,
+      tags: tagsList,
+      organizer: organizer,
+      contact: eventContact,
+      attendees: attendeesList,
+      attendeeCount: json['attendeeCount'] ?? (json['currentAttendees'] as num?)?.toInt() ?? 0,
+      highlights: highlightsList,
+      isFree: isFree,
+      price: json['price'] != null ? (json['price'] as num).toDouble() : null,
+      location: eventLocation,
+      isUserOrganizer: json['isUserOrganizer'] ?? false,
     );
   }
 
@@ -139,6 +382,19 @@ class Event {
       'createdAt': createdAt.toIso8601String(),
       'subEvents': subEvents.map((e) => e.toJson()).toList(),
       'isUserRegistered': isUserRegistered,
+      'registrationId': registrationId,
+      'isUserSaved': isUserSaved,
+      'coverImageUrl': coverImageUrl,
+      'tags': tags,
+      'organizer': organizer?.toJson(),
+      'contact': contact?.toJson(),
+      'attendees': attendees.map((e) => e.toJson()).toList(),
+      'attendeeCount': attendeeCount,
+      'highlights': highlights,
+      'isFree': isFree,
+      'price': price,
+      'location': location?.toJson(),
+      'isUserOrganizer': isUserOrganizer,
     };
   }
 
@@ -160,6 +416,19 @@ class Event {
     DateTime? createdAt,
     List<SubEvent>? subEvents,
     bool? isUserRegistered,
+    String? registrationId,
+    bool? isUserSaved,
+    String? coverImageUrl,
+    List<String>? tags,
+    Organizer? organizer,
+    EventContact? contact,
+    List<Attendee>? attendees,
+    int? attendeeCount,
+    List<String>? highlights,
+    bool? isFree,
+    double? price,
+    EventLocation? location,
+    bool? isUserOrganizer,
   }) {
     return Event(
       id: id ?? this.id,
@@ -179,6 +448,19 @@ class Event {
       createdAt: createdAt ?? this.createdAt,
       subEvents: subEvents ?? this.subEvents,
       isUserRegistered: isUserRegistered ?? this.isUserRegistered,
+      registrationId: registrationId ?? this.registrationId,
+      isUserSaved: isUserSaved ?? this.isUserSaved,
+      coverImageUrl: coverImageUrl ?? this.coverImageUrl,
+      tags: tags ?? this.tags,
+      organizer: organizer ?? this.organizer,
+      contact: contact ?? this.contact,
+      attendees: attendees ?? this.attendees,
+      attendeeCount: attendeeCount ?? this.attendeeCount,
+      highlights: highlights ?? this.highlights,
+      isFree: isFree ?? this.isFree,
+      price: price ?? this.price,
+      location: location ?? this.location,
+      isUserOrganizer: isUserOrganizer ?? this.isUserOrganizer,
     );
   }
 }
@@ -189,6 +471,7 @@ class EventsProvider with ChangeNotifier {
 
   List<Event> _events = [];
   List<Event> _registeredEvents = [];
+  List<Event> _savedEvents = [];
   Event? _currentEvent;
   bool _isLoading = false;
   bool _isLoadingMore = false;
@@ -204,10 +487,22 @@ class EventsProvider with ChangeNotifier {
     required this.storage,
   }) {
     _loadRegisteredEvents();
+    _loadSavedEvents();
   }
 
   List<Event> get events => _events;
-  List<Event> get registeredEvents => _registeredEvents;
+  List<Event> get registeredEvents {
+    // Sort events by date in ascending order (soonest first)
+    final sortedEvents = List<Event>.from(_registeredEvents);
+    sortedEvents.sort((a, b) => a.startTime.compareTo(b.startTime));
+    return sortedEvents;
+  }
+  List<Event> get savedEvents {
+    // Sort events by date in ascending order (soonest first)
+    final sortedEvents = List<Event>.from(_savedEvents);
+    sortedEvents.sort((a, b) => a.startTime.compareTo(b.startTime));
+    return sortedEvents;
+  }
   Event? get currentEvent => _currentEvent;
   bool get isLoading => _isLoading;
   bool get isLoadingMore => _isLoadingMore;
@@ -437,6 +732,8 @@ class EventsProvider with ChangeNotifier {
     required DateTime startTime,
     DateTime? endTime,
     int? maxAttendees,
+    List<String>? tags,
+    String? coverImageUrl,
   }) async {
     _isLoading = true;
     _error = null;
@@ -462,6 +759,8 @@ class EventsProvider with ChangeNotifier {
         startTime: startTime.toIso8601String(),
         endTime: endTime?.toIso8601String(),
         maxAttendees: maxAttendees,
+        tags: tags,
+        coverImageUrl: coverImageUrl,
         token: token,
       );
 
@@ -492,14 +791,49 @@ class EventsProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<String?> uploadEventCover(File imageFile) async {
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        _error = 'Not authenticated';
+        return null;
+      }
+
+      final response = await eventService.uploadEventCover(
+        token: token,
+        imageFile: imageFile,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['data']['coverImageUrl'];
+      } else {
+        final data = jsonDecode(response.body);
+        _error = data['message'] ?? 'Upload failed';
+        return null;
+      }
+    } catch (e) {
+      _error = 'Network error: ${e.toString()}';
+      return null;
+    }
+  }
+
   // Initialize/refresh data after login
   Future<void> initialize() async {
     await _loadRegisteredEvents();
+    await _loadSavedEvents();
   }
 
   // Refresh registered events
   Future<void> refreshRegisteredEvents() async {
     await fetchRegisteredEvents(refresh: true);
+  }
+
+  // Clear search state - should be called when leaving search screen
+  void clearSearchState() {
+    _currentSearchQuery = null;
+    _currentCategory = null;
+    notifyListeners();
   }
 
   // Get a single event by ID
@@ -569,6 +903,8 @@ class EventsProvider with ChangeNotifier {
             currentAttendees: _events[eventIndex].currentAttendees + 1,
           );
         }
+        // Refresh registered events to ensure My Events page is updated
+        await fetchRegisteredEvents(refresh: true);
         _isRegistering = false;
         notifyListeners();
         return true;
@@ -625,6 +961,8 @@ class EventsProvider with ChangeNotifier {
         }
         // Remove from registered events list
         _registeredEvents.removeWhere((e) => e.id == eventId);
+        // Refresh registered events to ensure My Events page is updated
+        await fetchRegisteredEvents(refresh: true);
         _isRegistering = false;
         notifyListeners();
         return true;
@@ -706,5 +1044,202 @@ class EventsProvider with ChangeNotifier {
 
   bool isEventRegistered(String eventId) {
     return _registeredEvents.any((e) => e.id == eventId);
+  }
+
+  bool isEventSaved(String eventId) {
+    return _savedEvents.any((e) => e.id == eventId);
+  }
+
+  // Get saved events
+  Future<bool> fetchSavedEvents({bool refresh = false}) async {
+    if (refresh) {
+      _currentPage = 1;
+      _hasMore = true;
+      _savedEvents = [];
+    }
+
+    if (_isLoading) return false;
+
+    _isLoading = _savedEvents.isEmpty;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        _error = 'Not authenticated';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
+      final response = await eventService.getSavedEvents(
+        token: token,
+        page: _currentPage,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> eventsJson = data['data']['events'];
+        final pagination = data['data']['pagination'];
+
+        final newEvents = eventsJson.map((e) => Event.fromJson(e)).toList();
+
+        if (refresh) {
+          _savedEvents = newEvents;
+        } else {
+          _savedEvents.addAll(newEvents);
+        }
+
+        _hasMore = _currentPage < pagination['pages'];
+        _currentPage++;
+
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _error = 'Failed to load saved events';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = 'Network error: ${e.toString()}';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Save an event
+  Future<bool> saveEvent(String eventId) async {
+    _isRegistering = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        _error = 'Not authenticated';
+        _isRegistering = false;
+        notifyListeners();
+        return false;
+      }
+
+      final response = await eventService.saveEvent(
+        eventId: eventId,
+        token: token,
+      );
+
+      if (response.statusCode == 201) {
+        // Update the current event's saved status
+        if (_currentEvent != null && _currentEvent!.id == eventId) {
+          _currentEvent = _currentEvent!.copyWith(
+            isUserSaved: true,
+          );
+        }
+        // Update event in list if present
+        final eventIndex = _events.indexWhere((e) => e.id == eventId);
+        if (eventIndex != -1) {
+          _events[eventIndex] = _events[eventIndex].copyWith(
+            isUserSaved: true,
+          );
+        }
+        // Refresh saved events to ensure My Events page is updated
+        await fetchSavedEvents(refresh: true);
+        _isRegistering = false;
+        notifyListeners();
+        return true;
+      } else {
+        final data = jsonDecode(response.body);
+        _error = data['error'] ?? 'Failed to save event';
+        _isRegistering = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = 'Network error: ${e.toString()}';
+      _isRegistering = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Unsave an event
+  Future<bool> unsaveEvent(String eventId) async {
+    _isRegistering = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        _error = 'Not authenticated';
+        _isRegistering = false;
+        notifyListeners();
+        return false;
+      }
+
+      final response = await eventService.unsaveEvent(
+        eventId: eventId,
+        token: token,
+      );
+
+      if (response.statusCode == 200) {
+        // Update the current event's saved status
+        if (_currentEvent != null && _currentEvent!.id == eventId) {
+          _currentEvent = _currentEvent!.copyWith(
+            isUserSaved: false,
+          );
+        }
+        // Update event in list if present
+        final eventIndex = _events.indexWhere((e) => e.id == eventId);
+        if (eventIndex != -1) {
+          _events[eventIndex] = _events[eventIndex].copyWith(
+            isUserSaved: false,
+          );
+        }
+        // Remove from saved events list
+        _savedEvents.removeWhere((e) => e.id == eventId);
+        // Refresh saved events to ensure My Events page is updated
+        await fetchSavedEvents(refresh: true);
+        _isRegistering = false;
+        notifyListeners();
+        return true;
+      } else {
+        final data = jsonDecode(response.body);
+        _error = data['error'] ?? 'Failed to unsave event';
+        _isRegistering = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = 'Network error: ${e.toString()}';
+      _isRegistering = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Load saved events from storage
+  Future<void> _loadSavedEvents() async {
+    try {
+      final token = await _getToken();
+      if (token == null) return;
+      
+      final response = await eventService.getSavedEvents(
+        token: token,
+        page: 1,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> eventsJson = data['data']['events'];
+        _savedEvents = eventsJson.map((e) => Event.fromJson(e)).toList();
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error loading saved events: $e');
+    }
   }
 }

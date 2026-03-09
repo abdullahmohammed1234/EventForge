@@ -1,29 +1,66 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
-import 'core/config/app_config.dart';
 import 'core/api/auth_service.dart';
 import 'core/api/event_service.dart';
 import 'core/utils/storage_helper.dart';
+import 'core/services/push_notification_service.dart';
 import 'features/auth/auth_provider.dart';
 import 'features/events/events_provider.dart';
+import 'features/notifications/notifications_provider.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/register_screen.dart';
 import 'features/auth/splash_screen.dart';
 import 'features/auth/landing_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/events/create_events_screen.dart';
-import 'features/events/event_details_screen.dart';
+import 'features/events/event_detail_page.dart';
+import 'features/events/event_planning_screen.dart';
+import 'features/events/ticket_view_screen.dart';
+import 'features/events/my_events_screen.dart';
+import 'features/search/search_screen.dart';
 import 'features/profile/profile_screen.dart';
+import 'features/safety/safety_center_screen.dart';
+import 'features/notifications/notifications_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Initialize Push Notifications (OneSignal)
+  final pushNotificationService = PushNotificationService();
+  await pushNotificationService.initialize();
+  
+  // Set preferred orientations to portrait only
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+  
   // Load environment variables from .env file
-  await dotenv.load(fileName: ".env");
+  try {
+    // Try to load from current directory first (for development)
+    await dotenv.load(fileName: '.env');
+  } catch (e) {
+    // If that fails, try to load from the application documents directory
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final envFile = File('${directory.path}/.env');
+      if (await envFile.exists()) {
+        await dotenv.load(fileName: envFile.path);
+      }
+    } catch (_) {
+      // Fall back to empty env if all else fails
+      debugPrint('Warning: Could not load .env file');
+    }
+  }
+  
+  debugPrint('Environment loaded. LOCAL_IP = ${dotenv.env['LOCAL_IP']}');
   // Initialize secure storage
   final storage = FlutterSecureStorage();
   
@@ -49,6 +86,9 @@ void main() async {
             eventService: eventService,
             storage: storage,
           ),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => NotificationsProvider(),
         ),
       ],
       child: EventPlannerApp(storageHelper: storageHelper),
@@ -136,13 +176,56 @@ class EventPlannerApp extends StatelessWidget {
         name: 'event-details',
         builder: (context, state) {
           final eventId = state.pathParameters['id']!;
-          return EventDetailsScreen(eventId: eventId);
+          return EventDetailPage(eventId: eventId);
         },
+      ),
+      GoRoute(
+        path: '/events/:id/plan',
+        name: 'event-planning',
+        builder: (context, state) {
+          final eventId = state.pathParameters['id']!;
+          return EventPlanningScreen(eventId: eventId);
+        },
+      ),
+      GoRoute(
+        path: '/events/:id/ticket',
+        name: 'ticket',
+        builder: (context, state) {
+          final eventId = state.pathParameters['id']!;
+          return TicketViewScreen(eventId: eventId);
+        },
+      ),
+      GoRoute(
+        path: '/search',
+        name: 'search',
+        builder: (context, state) => const SearchScreen(),
+      ),
+      GoRoute(
+        path: '/my-events',
+        name: 'my-events',
+        builder: (context, state) => const MyEventsScreen(),
       ),
       GoRoute(
         path: '/profile',
         name: 'profile',
-        builder: (context, state) => const HomeScreen(),
+        builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/safety/:eventId',
+        name: 'safety-center',
+        builder: (context, state) {
+          final eventId = state.pathParameters['eventId']!;
+          final eventName = state.extra as Map<String, dynamic>?;
+          return SafetyCenterScreen(
+            eventId: eventId,
+            eventName: eventName?['eventName'],
+          );
+        },
+      ),
+      GoRoute(
+        path: '/notifications',
+        name: 'notifications',
+        builder: (context, state) => const NotificationsScreen(),
       ),
     ],
     redirect: (context, state) {

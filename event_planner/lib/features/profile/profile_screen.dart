@@ -2,9 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../auth/auth_provider.dart';
+import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  Uint8List? _selectedImage;
+  final ImagePicker _picker = ImagePicker();
+
+Future<void> _pickImage() async {
+  final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+  if (image != null) {
+    final bytes = await image.readAsBytes();
+    setState(() {
+      _selectedImage = bytes;
+    });
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -20,15 +40,17 @@ class ProfileScreen extends StatelessWidget {
           padding: const EdgeInsets.all(24),
           child: Column(
             children: [
-              const CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.blue,
-                child: Icon(
-                  Icons.person,
-                  size: 60,
-                  color: Colors.white,
-                ),
-              ),
+              GestureDetector(
+  onTap: _pickImage,
+  child: CircleAvatar(
+    radius: 50,
+    backgroundColor: Colors.blue,
+    backgroundImage: _selectedImage != null ? MemoryImage(_selectedImage!) : null,
+    child: _selectedImage == null
+        ? const Icon(Icons.person, size: 60, color: Colors.white)
+        : null,
+  ),
+),
               const SizedBox(height: 16),
               Text(
                 user?.displayName ?? user?.email ?? 'User',
@@ -107,6 +129,18 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () => _showEditProfileDialog(context, user),
+                icon: const Icon(Icons.edit),
+                label: const Text('Edit Profile'),
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton.icon(
+                onPressed: () => context.push('/my-events'),
+                icon: const Icon(Icons.event),
+                label: const Text('My Events'),
+              ),
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
@@ -145,7 +179,56 @@ class ProfileScreen extends StatelessWidget {
       ),
     );
   }
+  void _showEditProfileDialog(BuildContext context, user) {
+  final nameController = TextEditingController(text: user?.displayName ?? '');
+  final cityController = TextEditingController(text: user?.city ?? '');
 
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Edit Profile'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: nameController,
+            decoration: const InputDecoration(
+              labelText: 'Name',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: cityController,
+            decoration: const InputDecoration(
+              labelText: 'City',
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+  onPressed: () async {
+    final authProvider = context.read<AuthProvider>();
+    await authProvider.updateProfile(
+      displayName: nameController.text,
+      city: cityController.text,
+    );
+    if (context.mounted) {
+      Navigator.pop(context);
+    }
+  },
+  child: const Text('Save'),
+),
+      ],
+    ),
+  );
+}
   String _formatDate(String dateString) {
     try {
       final date = DateTime.parse(dateString);

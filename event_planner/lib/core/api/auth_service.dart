@@ -1,11 +1,17 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'dart:io';
 import '../config/app_config.dart';
 
 class AuthService {
   final String baseUrl = AppConfig.apiBaseUrl;
 
   final http.Client _client = http.Client();
+
+  AuthService() {
+    debugPrint('AuthService initialized with baseUrl: $baseUrl');
+  }
 
   Future<http.Response> register({
     required String email,
@@ -76,6 +82,52 @@ class AuthService {
       return response;
     } catch (e) {
       throw Exception('Connection failed: $e');
+    }
+  }
+
+  Future<http.Response> uploadAvatar({
+    required String token,
+    required File imageFile,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl${Endpoints.uploadAvatar}');
+      final request = http.MultipartRequest('POST', uri);
+      
+      request.headers.addAll({
+        'Authorization': 'Bearer $token',
+      });
+      
+      request.files.add(
+        await http.MultipartFile.fromPath('image', imageFile.path),
+      );
+
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 30));
+      return await http.Response.fromStream(streamedResponse);
+    } catch (e) {
+      throw Exception('Upload failed: $e');
+    }
+  }
+
+  Future<http.Response> updateProfile({
+    required String token,
+    String? displayName,
+    String? city,
+  }) async {
+    try {
+      final response = await _client.put(
+        Uri.parse('$baseUrl${Endpoints.profile}'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          if (displayName != null) 'displayName': displayName,
+          if (city != null) 'city': city,
+        }),
+      ).timeout(const Duration(seconds: 15));
+      return response;
+    } catch (e) {
+      throw Exception('Update profile failed: $e');
     }
   }
 

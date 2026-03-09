@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const path = require('path');
 
 const connectDB = require('./config/database');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
@@ -63,6 +64,9 @@ app.get('/', (req, res) => {
     },
   });
 });
+
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // API routes
 app.use('/api/auth', authRoutes);

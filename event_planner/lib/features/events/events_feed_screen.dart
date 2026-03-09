@@ -3,6 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'events_provider.dart';
+import '../auth/auth_provider.dart';
+import '../groups/your_groups_screen.dart';
+import '../discover/widgets/discover_header.dart';
 
 class EventsFeedScreen extends StatefulWidget {
   const EventsFeedScreen({super.key});
@@ -13,11 +16,16 @@ class EventsFeedScreen extends StatefulWidget {
 
 class _EventsFeedScreenState extends State<EventsFeedScreen> {
   final ScrollController _scrollController = ScrollController();
+  
+  // Track which view is selected: 0 = Discover Events, 1 = Your Groups
+  int _selectedView = 0;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Clear any search state from previous searches before fetching events
+      context.read<EventsProvider>().clearSearchState();
       context.read<EventsProvider>().fetchEvents(refresh: true);
     });
     _scrollController.addListener(_scrollListener);
@@ -44,78 +52,119 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
     final eventsProvider = context.watch<EventsProvider>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Discover Events'),
+      backgroundColor: Colors.grey[50],
+      body: Column(
+        children: [
+          // Custom Discover Header - replaces AppBar
+          DiscoverHeader(
+            selectedIndex: _selectedView,
+            onDiscoverEventsTap: () {
+              setState(() {
+                _selectedView = 0;
+              });
+            },
+            onYourGroupsTap: () {
+              setState(() {
+                _selectedView = 1;
+              });
+            },
+          ),
+          
+          // Content area - switch between views
+          Expanded(
+            child: _selectedView == 0
+                ? _buildDiscoverEventsTab(eventsProvider)
+                : _buildYourGroupsTab(),
+          ),
+        ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          context.go('/events/create');
-        },
-        label: const Text('Create Event'),
-        icon: const Icon(Icons.add),
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await eventsProvider.fetchEvents(refresh: true);
-        },
-        child: eventsProvider.isLoading && eventsProvider.events.isEmpty
-            ? const Center(child: CircularProgressIndicator())
-            : eventsProvider.events.isEmpty
-                ? ListView(
-                    children: [
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32.0),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.event_busy,
-                                size: 80,
-                                color: Colors.grey[400],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No events found',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.grey[600],
+    );
+  }
+
+  Widget _buildYourGroupsTab() {
+    return const YourGroupsScreen();
+  }
+
+  Widget _buildDiscoverEventsTab(EventsProvider eventsProvider) {
+    return Stack(
+      children: [
+        RefreshIndicator(
+          onRefresh: () async {
+            // Clear search state on refresh to get all events
+            context.read<EventsProvider>().clearSearchState();
+            await context.read<EventsProvider>().fetchEvents(refresh: true);
+          },
+          child: eventsProvider.isLoading && eventsProvider.events.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : eventsProvider.events.isEmpty
+                  ? ListView(
+                      children: [
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.event_busy,
+                                  size: 80,
+                                  color: Colors.grey[400],
                                 ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Be the first to create an event!',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[500],
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No events found',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    color: Colors.grey[600],
+                                  ),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Be the first to create an event!',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  )
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
-                    itemCount: eventsProvider.events.length +
-                        (eventsProvider.isLoadingMore ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index >= eventsProvider.events.length) {
-                        return const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(16),
-                            child: CircularProgressIndicator(),
-                          ),
-                        );
-                      }
+                      ],
+                    )
+                  : ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(16),
+                      itemCount: eventsProvider.events.length +
+                          (eventsProvider.isLoadingMore ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index >= eventsProvider.events.length) {
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(16),
+                              child: CircularProgressIndicator(),
+                            ),
+                          );
+                        }
 
-                      final event = eventsProvider.events[index];
-                      return EventCard(event: event);
-                    },
-                  ),
-      ),
+                        final event = eventsProvider.events[index];
+                        return EventCard(event: event);
+                      },
+                    ),
+        ),
+        // Floating Action Button
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: FloatingActionButton.extended(
+            onPressed: () {
+              context.go('/events/create');
+            },
+            label: const Text('Create Event'),
+            icon: const Icon(Icons.add),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -145,6 +194,97 @@ class EventCard extends StatelessWidget {
       'other': Colors.grey,
     };
     return colors[category] ?? Colors.grey;
+  }
+
+  Future<void> _toggleBookmark(BuildContext context) async {
+    final authProvider = context.read<AuthProvider>();
+    final eventsProvider = context.read<EventsProvider>();
+
+    if (!authProvider.isAuthenticated) {
+      // Show login prompt
+      if (context.mounted) {
+        showModalBottomSheet(
+          context: context,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          builder: (context) => Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[400],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Icon(Icons.login, size: 48, color: Colors.blue),
+                const SizedBox(height: 16),
+                const Text(
+                  'Sign in to save events',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'You need to be signed in to save events',
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      context.push('/login');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: const Text('Sign In'),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    // Toggle save/unsave
+    if (event.isUserSaved) {
+      await eventsProvider.unsaveEvent(event.id);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Event removed from saved'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } else {
+      await eventsProvider.saveEvent(event.id);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Event saved!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -195,12 +335,19 @@ class EventCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    event.title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          event.title,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   Row(
@@ -264,14 +411,37 @@ class EventCard extends StatelessWidget {
                           color: Colors.grey,
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          'By ${event.creatorName}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey[600],
+                        Expanded(
+                          child: Text(
+                            'By ${event.creatorName}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[600],
+                            ),
                           ),
                         ),
+                        IconButton(
+                          onPressed: () => _toggleBookmark(context),
+                          icon: Icon(
+                            event.isUserSaved ? Icons.bookmark : Icons.bookmark_border,
+                            color: event.isUserSaved ? Colors.blue : Colors.grey,
+                          ),
+                          tooltip: event.isUserSaved ? 'Remove from saved' : 'Save event',
+                        ),
                       ],
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: IconButton(
+                        onPressed: () => _toggleBookmark(context),
+                        icon: Icon(
+                          event.isUserSaved ? Icons.bookmark : Icons.bookmark_border,
+                          color: event.isUserSaved ? Colors.blue : Colors.grey,
+                        ),
+                        tooltip: event.isUserSaved ? 'Remove from saved' : 'Save event',
+                      ),
                     ),
                   ],
                 ],

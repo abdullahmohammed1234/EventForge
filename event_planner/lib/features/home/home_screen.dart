@@ -7,14 +7,16 @@ import '../search/search_screen.dart';
 import '../profile/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final int startingIndex;
+
+  const HomeScreen({super.key, this.startingIndex = 0});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _currentIndex = 0;
+  late int _currentIndex;
   bool _isInitialized = false;
 
   final List<Widget> _screens = const [
@@ -23,6 +25,24 @@ class _HomeScreenState extends State<HomeScreen> {
     MyEventsScreen(),
     ProfileScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.startingIndex;
+  }
+
+  void _onTabSelected(int index) {
+    // When switching to Events tab (index 0), clear search state and fetch all events
+    if (index == 0) {
+      final provider = Provider.of<EventsProvider>(context, listen: false);
+      provider.clearSearchState();
+      provider.fetchEvents(refresh: true);
+    }
+    setState(() {
+      _currentIndex = index;
+    });
+  }
 
   @override
   void didChangeDependencies() {
@@ -49,11 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+        onDestinationSelected: _onTabSelected,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.event_outlined),

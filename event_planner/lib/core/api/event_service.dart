@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'dart:io';
 import '../config/app_config.dart';
 
 class EventService {
@@ -54,6 +55,8 @@ class EventService {
     required String startTime,
     String? endTime,
     int? maxAttendees,
+    List<String>? tags,
+    String? coverImageUrl,
     required String token,
   }) async {
     final body = <String, dynamic>{
@@ -69,6 +72,8 @@ class EventService {
     if (longitude != null) body['longitude'] = longitude;
     if (endTime != null) body['endTime'] = endTime;
     if (maxAttendees != null) body['maxAttendees'] = maxAttendees;
+    if (tags != null && tags.isNotEmpty) body['tags'] = tags;
+    if (coverImageUrl != null) body['coverImageUrl'] = coverImageUrl;
 
     return _client.post(
       Uri.parse('$baseUrl${Endpoints.events}'),
@@ -148,6 +153,53 @@ class EventService {
     ).timeout(const Duration(seconds: 10));
   }
 
+  Future<http.Response> getSavedEvents({
+    required String token,
+    int page = 1,
+    int limit = 20,
+  }) async {
+    final uri = Uri.parse('$baseUrl${Endpoints.savedEvents}').replace(
+      queryParameters: {
+        'page': page.toString(),
+        'limit': limit.toString(),
+      },
+    );
+
+    return _client.get(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    ).timeout(const Duration(seconds: 10));
+  }
+
+  Future<http.Response> saveEvent({
+    required String eventId,
+    required String token,
+  }) async {
+    return _client.post(
+      Uri.parse('$baseUrl${EventEndpoints.saveEvent(eventId)}'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    ).timeout(const Duration(seconds: 10));
+  }
+
+  Future<http.Response> unsaveEvent({
+    required String eventId,
+    required String token,
+  }) async {
+    return _client.post(
+      Uri.parse('$baseUrl${EventEndpoints.unsaveEvent(eventId)}'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    ).timeout(const Duration(seconds: 10));
+  }
+
   Future<http.Response> searchEvents({
     required String query,
     String? category,
@@ -173,6 +225,29 @@ class EventService {
     }
 
     return _client.get(uri, headers: headers).timeout(const Duration(seconds: 10));
+  }
+
+  Future<http.Response> uploadEventCover({
+    required String token,
+    required File imageFile,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl${Endpoints.uploadEventCover}');
+      final request = http.MultipartRequest('POST', uri);
+      
+      request.headers.addAll({
+        'Authorization': 'Bearer $token',
+      });
+      
+      request.files.add(
+        await http.MultipartFile.fromPath('image', imageFile.path),
+      );
+
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 30));
+      return await http.Response.fromStream(streamedResponse);
+    } catch (e) {
+      throw Exception('Upload failed: $e');
+    }
   }
 
   void dispose() {
