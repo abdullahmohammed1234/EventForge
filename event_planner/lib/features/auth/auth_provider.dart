@@ -188,7 +188,9 @@ class AuthProvider with ChangeNotifier {
     _token = null;
     _user = null;
     _error = null;
-    await storageHelper.clearAll();
+    // Only clear auth-related data, not onboarding state
+    await storageHelper.deleteToken();
+    await storageHelper.deleteUserData();
     notifyListeners();
   }
 
