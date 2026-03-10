@@ -10,7 +10,6 @@ import 'events_provider.dart';
 import 'widgets/dynamic_theme_controller.dart';
 import 'widgets/category_pill.dart';
 import 'widgets/overlapping_avatars.dart';
-import 'widgets/bottom_floating_nav.dart';
 
 /// Category-based image provider helper
 class CategoryImageHelper {
@@ -56,7 +55,6 @@ class _EventDetailPageState extends State<EventDetailPage>
 
   final DynamicThemeController _themeController = DynamicThemeController();
   bool _isDescriptionExpanded = false;
-  int _currentNavIndex = 0;
   bool _isFavorite = false;
 
   Future<void> _openGoogleMaps(Event event) async {
@@ -188,32 +186,13 @@ Join me at this event!
     Share.share(eventDetails, subject: event.title);
   }
 
-  void _handleNavTap(int index) {
-    switch (index) {
-      case 0: // Home
-        context.pushReplacement('/home');
-        break;
-      case 1: // Search
-        context.push('/search');
-        break;
-      case 2: // Create
-        context.push('/events/create');
-        break;
-      case 3: // Saved/My Events
-        context.push('/my-events');
-        break;
-      case 4: // Profile
-        context.push('/profile');
-        break;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final eventsProvider = context.watch<EventsProvider>();
     final event = eventsProvider.currentEvent;
     final screenHeight = MediaQuery.of(context).size.height;
-    // Use 55% for sheet to ensure bottom nav is visible and button is reachable
+    // Use 55% for sheet height
     final sheetHeight = screenHeight * 0.55;
 
     return ChangeNotifierProvider.value(
@@ -288,20 +267,6 @@ Join me at this event!
                 ),
               ),
 
-            // 5. Bottom Floating Nav Bar - Positioned above sheet
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 50,
-              child: BottomFloatingNav(
-                currentIndex: _currentNavIndex,
-                onTap: (index) {
-                  setState(() => _currentNavIndex = index);
-                  _handleNavTap(index);
-                },
-                accentColor: _themeController.accentColor,
-              ),
-            ),
           ],
         ),
       ),

@@ -578,13 +578,6 @@ class _SearchScreenState extends State<SearchScreen> {
           border: Border.all(
             color: isActive ? AppColors.pink : AppColors.grey.withOpacity(0.3),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
