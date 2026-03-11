@@ -21,23 +21,24 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkAuthAndNavigate() async {
-    // Show splash for at least 1.5 seconds for better UX
-    final minSplashDuration = Future.delayed(const Duration(milliseconds: 1500));
-    
+    // Show splash for at least 2.5 seconds for better UX
+    final minSplashDuration =
+        Future.delayed(const Duration(milliseconds: 4500));
+
     // Also wait for auth check to complete
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final authCheck = _waitForAuthCheck(authProvider);
-    
+
     // Wait for both minimum duration and auth check
     await Future.wait([minSplashDuration, authCheck]);
 
     if (!mounted) return;
-    
+
     // Check if onboarding has been completed
     final storage = FlutterSecureStorage();
     final storageHelper = StorageHelper(storage);
     final isOnboardingComplete = await storageHelper.isOnboardingComplete();
-    
+
     // Navigate based on auth status and onboarding completion
     if (!isOnboardingComplete) {
       // First time user - show onboarding
