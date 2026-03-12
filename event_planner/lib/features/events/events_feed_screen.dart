@@ -196,6 +196,38 @@ class EventCard extends StatelessWidget {
     return colors[category] ?? Colors.grey;
   }
 
+  Widget _buildCategoryBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: _getCategoryColor(event.category).withOpacity(0.1),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(12),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            _getCategoryIcon(event.category),
+            size: 16,
+            color: _getCategoryColor(event.category),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            event.category.toUpperCase(),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: _getCategoryColor(event.category),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _toggleBookmark(BuildContext context) async {
     final authProvider = context.read<AuthProvider>();
     final eventsProvider = context.read<EventsProvider>();
@@ -301,35 +333,24 @@ class EventCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: _getCategoryColor(event.category).withOpacity(0.1),
+            // Event Image
+            if (event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty)
+              ClipRRect(
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(12),
                 ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    _getCategoryIcon(event.category),
-                    size: 16,
-                    color: _getCategoryColor(event.category),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    event.category.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: _getCategoryColor(event.category),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                child: Image.network(
+                  event.coverImageUrl!,
+                  height: 150,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return _buildCategoryBanner();
+                  },
+                ),
+              )
+            else
+              _buildCategoryBanner(),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(

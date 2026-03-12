@@ -61,39 +61,10 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.primary,
-      body: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width,
-            maxHeight: MediaQuery.of(context).size.height,
-          ),
-          child: Image.asset(
-            'assets/SplashScreen.gif',
-            fit: BoxFit.contain,
-            width: double.infinity,
-            height: double.infinity,
-            errorBuilder: (context, error, stackTrace) {
-              return Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.event,
-                    size: 100,
-                    color: Colors.white,
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'EventForge',
-                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                ],
-              );
-            },
-          ),
+      body: SizedBox.expand(
+        child: Image.asset(
+          'assets/SplashScreen.gif',
+          fit: BoxFit.cover, // Makes it fill the entire screen
         ),
       ),
     );

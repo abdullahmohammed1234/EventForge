@@ -811,6 +811,52 @@ class _SavedEventCard extends StatelessWidget {
     await Share.share(text);
   }
 
+  Widget _buildSavedBadge() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.blue.withOpacity(0.1),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(12),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.bookmark,
+            size: 16,
+            color: Colors.blue,
+          ),
+          const SizedBox(width: 8),
+          const Text(
+            'SAVED',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.blue,
+            ),
+          ),
+          const Spacer(),
+          Icon(
+            _getCategoryIcon(event.category),
+            size: 16,
+            color: _getCategoryColor(event.category),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            event.category.toUpperCase(),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: _getCategoryColor(event.category),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     const accent = Color(0xFFF062AE);

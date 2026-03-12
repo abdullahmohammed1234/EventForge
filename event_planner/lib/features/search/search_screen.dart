@@ -578,13 +578,6 @@ class _SearchScreenState extends State<SearchScreen> {
           border: Border.all(
             color: isActive ? AppColors.pink : AppColors.grey.withOpacity(0.3),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -674,7 +667,7 @@ class _SearchScreenState extends State<SearchScreen> {
               child: const Text(
                 'Clear all filters',
                 style: TextStyle(
-                  color: AppColors.pink,
+                  color: AppColors.black,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -974,8 +967,8 @@ class _DateFilterSheetState extends State<_DateFilterSheet> {
               child: Text(
                 'Selected: ${_formatDateRange()}',
                 style: const TextStyle(
-                  color: AppColors.pink,
-                  fontWeight: FontWeight.w500,
+                  color: AppColors.black,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
@@ -1217,8 +1210,8 @@ class _LocationFilterSheetState extends State<_LocationFilterSheet> {
                 ),
                 child: Text(
                   'Within ${_distance.toInt()} km',
-                  style: const TextStyle(
-                    color: AppColors.pink,
+                  style: TextStyle(
+                    color: AppColors.pink.withOpacity(0.8),
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
                   ),

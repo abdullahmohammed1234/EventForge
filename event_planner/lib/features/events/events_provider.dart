@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/api/event_service.dart';
+import '../../core/config/app_config.dart';
 
 class SubEvent {
   final String id;
@@ -349,7 +350,7 @@ class Event {
       registrationId: json['registrationId'],
       isUserSaved: json['isUserSaved'] ?? false,
       coverImageUrl: (json['coverImageUrl'] is String && json['coverImageUrl'].isNotEmpty) 
-          ? json['coverImageUrl'] 
+          ? '${AppConfig.apiBaseUrl.replaceAll('/api', '')}${json['coverImageUrl']}' 
           : null,
       tags: tagsList,
       organizer: organizer,

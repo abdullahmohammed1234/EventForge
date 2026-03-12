@@ -98,7 +98,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     }
   }
   
-  void _skipToRegister() {
+  void _skipToRegister() async {
+    // Save onboarding completion state even if user skips
+    final storage = FlutterSecureStorage();
+    final storageHelper = StorageHelper(storage);
+    await storageHelper.setOnboardingComplete(true);
+    
+    // Navigate to register
     context.go('/register');
   }
   
