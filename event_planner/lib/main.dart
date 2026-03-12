@@ -31,17 +31,17 @@ import 'features/notifications/notifications_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Push Notifications (OneSignal)
   final pushNotificationService = PushNotificationService();
   await pushNotificationService.initialize();
-  
+
   // Set preferred orientations to portrait only
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  
+
   // Load environment variables from .env file
   try {
     // Try to load from current directory first (for development)
@@ -59,18 +59,18 @@ void main() async {
       debugPrint('Warning: Could not load .env file');
     }
   }
-  
+
   debugPrint('Environment loaded. LOCAL_IP = ${dotenv.env['LOCAL_IP']}');
   // Initialize secure storage
   final storage = FlutterSecureStorage();
-  
+
   // Initialize services
   final authService = AuthService();
   final eventService = EventService();
-  
+
   // Initialize storage helper
   final storageHelper = StorageHelper(storage);
-  
+
   runApp(
     MultiProvider(
       providers: [
@@ -255,7 +255,11 @@ class EventPlannerApp extends StatelessWidget {
       final isOnboardingPage = state.matchedLocation == '/onboarding';
 
       // Allow access to splash, landing, login, and register pages without auth
-      if (!isAuthenticated && !isLoginPage && !isRegisterPage && !isSplashPage && !isOnboardingPage) {
+      if (!isAuthenticated &&
+          !isLoginPage &&
+          !isRegisterPage &&
+          !isSplashPage &&
+          !isOnboardingPage) {
         return '/login';
       }
 
