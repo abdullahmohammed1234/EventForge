@@ -101,8 +101,10 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      debugPrint('Attempting login to: ${authService.baseUrl}${Endpoints.login}');
-      final response = await authService.login(email: email, password: password);
+      debugPrint(
+          'Attempting login to: ${authService.baseUrl}${Endpoints.login}');
+      final response =
+          await authService.login(email: email, password: password);
       debugPrint('Login response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
@@ -163,7 +165,9 @@ class AuthProvider with ChangeNotifier {
         return true;
       } else {
         final data = jsonDecode(response.body);
-        _error = data['error'] ?? data['errors']?.toString() ?? 'Registration failed';
+        _error = data['error'] ??
+            data['errors']?.toString() ??
+            'Registration failed';
         _isLoading = false;
         notifyListeners();
         return false;
@@ -202,7 +206,7 @@ class AuthProvider with ChangeNotifier {
     String? city,
   }) async {
     if (_token == null) return false;
-    
+
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -216,10 +220,10 @@ class AuthProvider with ChangeNotifier {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        _user = User.fromJson(data['data']);
-        
+        _user = User.fromJson(data['data']['user']);
+
         await storageHelper.saveUserData(jsonEncode(_user!.toJson()));
-        
+
         _isLoading = false;
         notifyListeners();
         return true;
@@ -240,7 +244,7 @@ class AuthProvider with ChangeNotifier {
 
   Future<bool> uploadAvatar(File imageFile) async {
     if (_token == null) return false;
-    
+
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -254,7 +258,7 @@ class AuthProvider with ChangeNotifier {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final avatarUrl = data['data']['avatarUrl'];
-        
+
         // Update user with new avatar URL
         _user = User(
           id: _user!.id,
@@ -264,9 +268,9 @@ class AuthProvider with ChangeNotifier {
           createdAt: _user!.createdAt,
           avatarUrl: avatarUrl,
         );
-        
+
         await storageHelper.saveUserData(jsonEncode(_user!.toJson()));
-        
+
         _isLoading = false;
         notifyListeners();
         return true;

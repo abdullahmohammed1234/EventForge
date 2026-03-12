@@ -6,11 +6,9 @@
   <component name="ChangeListManager">
     <list default="true" id="dc0fd7b4-1fe4-438a-93e6-e470ace67a94" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/event_planner/assets/SplashScreen.gif" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/assets/SplashScreen.gif" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/event_planner/lib/features/auth/splash_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/lib/features/auth/splash_screen.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/event_planner/lib/features/events/my_events_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/lib/features/events/my_events_screen.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/event_planner/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/event_planner/pubspec.lock" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/pubspec.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/event_planner/lib/features/auth/auth_provider.dart" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/lib/features/auth/auth_provider.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/event_planner/lib/features/profile/profile_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/lib/features/profile/profile_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/event_planner/lib/main.dart" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/lib/main.dart" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
