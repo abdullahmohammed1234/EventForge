@@ -749,6 +749,36 @@ class _SavedEventCard extends StatelessWidget {
 
   const _SavedEventCard({required this.event});
 
+  Color _getCategoryColor(String category) {
+    final colors = {
+      'music': Colors.purple,
+      'sports': Colors.green,
+      'arts': Colors.orange,
+      'food': Colors.red,
+      'technology': Colors.blue,
+      'business': Colors.teal,
+      'social': Colors.pink,
+      'outdoor': Colors.lime,
+      'other': Colors.grey,
+    };
+    return colors[category] ?? Colors.grey;
+  }
+
+  IconData _getCategoryIcon(String category) {
+    final icons = {
+      'music': Icons.music_note,
+      'sports': Icons.sports_baseball,
+      'arts': Icons.palette,
+      'food': Icons.restaurant,
+      'technology': Icons.computer,
+      'business': Icons.business,
+      'social': Icons.groups,
+      'outdoor': Icons.park,
+      'other': Icons.event,
+    };
+    return icons[category] ?? Icons.event;
+  }
+
   String _formatDate(DateTime date) {
     return DateFormat('EEE, MMMM d • h:mm a').format(date);
   }

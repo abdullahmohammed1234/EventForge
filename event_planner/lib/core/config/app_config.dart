@@ -38,9 +38,13 @@ class Endpoints {
   static const String login = '/auth/login';
   static const String logout = '/auth/logout';
   static const String me = '/auth/me';
+  static const String profile = '/auth/profile';
+  static const String uploadAvatar = '/auth/upload-avatar';
   static const String events = '/events';
   static const String myEvents = '/events/my-events';
   static const String registeredEvents = '/events/registered';
+  static const String savedEvents = '/events/saved';
+  static const String uploadEventCover = '/events/upload-cover';
 }
 
 // Helper method to get event registration endpoint
@@ -48,4 +52,6 @@ class EventEndpoints {
   static String registerForEvent(String eventId) => '/events/$eventId/register';
   static String unregisterFromEvent(String eventId) =>
       '/events/$eventId/unregister';
+  static String saveEvent(String eventId) => '/events/$eventId/save';
+  static String unsaveEvent(String eventId) => '/events/$eventId/unsave';
 }
