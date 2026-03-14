@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'dart:io';
+import 'dart:typed_data';
 import '../config/app_config.dart';
 
 class EventService {
@@ -241,6 +242,35 @@ class EventService {
       
       request.files.add(
         await http.MultipartFile.fromPath('image', imageFile.path),
+      );
+
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 30));
+      return await http.Response.fromStream(streamedResponse);
+    } catch (e) {
+      throw Exception('Upload failed: $e');
+    }
+  }
+
+  // Web-compatible version using bytes
+  Future<http.Response> uploadEventCoverWeb({
+    required String token,
+    required Uint8List imageBytes,
+    required String fileName,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl${Endpoints.uploadEventCover}');
+      final request = http.MultipartRequest('POST', uri);
+      
+      request.headers.addAll({
+        'Authorization': 'Bearer $token',
+      });
+      
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'image',
+          imageBytes,
+          filename: fileName,
+        ),
       );
 
       final streamedResponse = await request.send().timeout(const Duration(seconds: 30));

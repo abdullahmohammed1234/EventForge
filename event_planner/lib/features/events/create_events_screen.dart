@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -25,6 +26,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
 
   final ImagePicker _picker = ImagePicker();
   File? _coverImage;
+  Uint8List? _coverImageBytes;
   String? _coverImageUrl;
   bool _isUploadingImage = false;
 
@@ -65,30 +67,61 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       );
 
       if (image != null) {
-        setState(() {
-          _coverImage = File(image.path);
-          _isUploadingImage = true;
-        });
+        if (kIsWeb) {
+          // On web, read the image as bytes
+          final bytes = await image.readAsBytes();
+          setState(() {
+            _coverImageBytes = bytes;
+            _isUploadingImage = true;
+          });
 
-        // Upload the image first
-        final eventsProvider = context.read<EventsProvider>();
-        final uploadedUrl = await eventsProvider.uploadEventCover(_coverImage!);
+          // Upload the image first
+          final eventsProvider = context.read<EventsProvider>();
+          final uploadedUrl = await eventsProvider.uploadEventCoverWeb(bytes, image.name);
 
-        setState(() {
-          _isUploadingImage = false;
-          if (uploadedUrl != null) {
-            _coverImageUrl = uploadedUrl;
+          setState(() {
+            _isUploadingImage = false;
+            if (uploadedUrl != null) {
+              _coverImageUrl = uploadedUrl;
+            }
+          });
+
+          if (mounted && uploadedUrl != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Cover image uploaded!')),
+            );
+          } else if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(eventsProvider.error ?? 'Failed to upload image')),
+            );
           }
-        });
+        } else {
+          // On native platforms
+          setState(() {
+            _coverImage = File(image.path);
+            _isUploadingImage = true;
+          });
 
-        if (mounted && uploadedUrl != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Cover image uploaded!')),
-          );
-        } else if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(eventsProvider.error ?? 'Failed to upload image')),
-          );
+          // Upload the image first
+          final eventsProvider = context.read<EventsProvider>();
+          final uploadedUrl = await eventsProvider.uploadEventCover(_coverImage!);
+
+          setState(() {
+            _isUploadingImage = false;
+            if (uploadedUrl != null) {
+              _coverImageUrl = uploadedUrl;
+            }
+          });
+
+          if (mounted && uploadedUrl != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Cover image uploaded!')),
+            );
+          } else if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(eventsProvider.error ?? 'Failed to upload image')),
+            );
+          }
         }
       }
     } catch (e) {
@@ -244,16 +277,21 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.grey[300]!),
                   ),
-                  child: _coverImage != null
+                  child: (kIsWeb ? _coverImageBytes != null : _coverImage != null)
                       ? Stack(
                           fit: StackFit.expand,
                           children: [
                             ClipRRect(
                               borderRadius: BorderRadius.circular(12),
-                              child: Image.file(
-                                _coverImage!,
-                                fit: BoxFit.cover,
-                              ),
+                              child: kIsWeb
+                                  ? Image.memory(
+                                      _coverImageBytes!,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : Image.file(
+                                      _coverImage!,
+                                      fit: BoxFit.cover,
+                                    ),
                             ),
                             if (_isUploadingImage)
                               Container(

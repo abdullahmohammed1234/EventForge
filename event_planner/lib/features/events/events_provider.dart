@@ -819,6 +819,35 @@ class EventsProvider with ChangeNotifier {
     }
   }
 
+  // Web-compatible version using bytes
+  Future<String?> uploadEventCoverWeb(Uint8List imageBytes, String fileName) async {
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        _error = 'Not authenticated';
+        return null;
+      }
+
+      final response = await eventService.uploadEventCoverWeb(
+        token: token,
+        imageBytes: imageBytes,
+        fileName: fileName,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['data']['coverImageUrl'];
+      } else {
+        final data = jsonDecode(response.body);
+        _error = data['message'] ?? 'Upload failed';
+        return null;
+      }
+    } catch (e) {
+      _error = 'Network error: ${e.toString()}';
+      return null;
+    }
+  }
+
   // Initialize/refresh data after login
   Future<void> initialize() async {
     await _loadRegisteredEvents();
