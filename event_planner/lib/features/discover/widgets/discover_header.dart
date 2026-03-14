@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// A custom header widget for the Discover page.
-/// 
+///
 /// Replaces the traditional AppBar with a modern navigation row.
 /// Contains:
 /// - Left: Location selector ("Near Me ▼")
@@ -73,15 +73,16 @@ class DiscoverHeader extends StatelessWidget {
   /// Left element - Location selector
   Widget _buildLocationSelector(BuildContext context) {
     return GestureDetector(
-      onTap: onLocationTap ?? () {
-        // Placeholder callback - opens future location selector
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Location selector coming soon!'),
-            duration: Duration(seconds: 1),
-          ),
-        );
-      },
+      onTap: onLocationTap ??
+          () {
+            // Placeholder callback - opens future location selector
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Location selector coming soon!'),
+                duration: Duration(seconds: 1),
+              ),
+            );
+          },
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
