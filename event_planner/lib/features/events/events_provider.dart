@@ -184,7 +184,7 @@ class Attendee {
     return Attendee(
       id: userData?['_id'] ?? userData?['id'] ?? json['id'] ?? '',
       name: userData?['displayName'] ?? userData?['name'],
-      avatarUrl: avatarUrl is String && avatarUrl.isNotEmpty ? avatarUrl : null,
+      avatarUrl: avatarUrl is String && avatarUrl.isNotEmpty ? AppConfig.getFullUrl(avatarUrl) : null,
     );
   }
 
@@ -296,7 +296,7 @@ class Event {
         id: creator['_id'] ?? creator['id'],
         name: creator['displayName'] ?? 'Event Organizer',
         type: creator['type'] ?? creator['city'] != null ? 'Local Community' : null,
-        avatarUrl: avatarUrl is String && avatarUrl.isNotEmpty ? avatarUrl : null,
+        avatarUrl: avatarUrl is String && avatarUrl.isNotEmpty ? AppConfig.getFullUrl(avatarUrl) : null,
       );
     }
     
@@ -807,7 +807,9 @@ class EventsProvider with ChangeNotifier {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['data']['coverImageUrl'];
+        // Convert relative URL to absolute URL
+        final relativeUrl = data['data']['coverImageUrl'];
+        return AppConfig.getFullUrl(relativeUrl);
       } else {
         final data = jsonDecode(response.body);
         _error = data['message'] ?? 'Upload failed';
@@ -836,7 +838,9 @@ class EventsProvider with ChangeNotifier {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['data']['coverImageUrl'];
+        // Convert relative URL to absolute URL
+        final relativeUrl = data['data']['coverImageUrl'];
+        return AppConfig.getFullUrl(relativeUrl);
       } else {
         final data = jsonDecode(response.body);
         _error = data['message'] ?? 'Upload failed';

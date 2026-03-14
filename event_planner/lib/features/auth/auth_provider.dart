@@ -259,7 +259,9 @@ class AuthProvider with ChangeNotifier {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final avatarUrl = data['data']['avatarUrl'];
+        // Convert relative URL to absolute URL
+        final relativeUrl = data['data']['avatarUrl'];
+        final avatarUrl = AppConfig.getFullUrl(relativeUrl);
 
         // Update user with new avatar URL
         _user = User(

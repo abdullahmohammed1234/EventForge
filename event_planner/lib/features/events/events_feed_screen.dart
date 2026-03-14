@@ -7,6 +7,7 @@ import '../auth/auth_provider.dart';
 import '../groups/your_groups_screen.dart';
 import '../discover/widgets/discover_header.dart';
 import '../discover/widgets/category_item.dart';
+import '../../core/config/app_config.dart';
 
 class EventsFeedScreen extends StatefulWidget {
   const EventsFeedScreen({super.key});
@@ -385,10 +386,19 @@ class EventCard extends StatelessWidget {
                   ),
                   child: event.coverImageUrl != null
                       ? Image.network(
-                          event.coverImageUrl!,
+                          AppConfig.getFullUrl(event.coverImageUrl),
                           height: 180,
                           width: double.infinity,
                           fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              height: 180,
+                              color: Colors.grey[300],
+                              child: const Center(
+                                child: Icon(Icons.image_not_supported, size: 40),
+                              ),
+                            );
+                          },
                         )
                       : Container(
                           height: 180,

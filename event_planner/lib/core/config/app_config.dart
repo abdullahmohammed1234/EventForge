@@ -28,6 +28,31 @@ class AppConfig {
     return 'https://192.168.1.69:3000/api';
   }
 
+  // Get the base URL without /api suffix (for uploads, etc.)
+  static String get baseUrl {
+    if (kDebugMode) {
+      final String? localIP = dotenv.env['LOCAL_IP'];
+      if (localIP != null && localIP.isNotEmpty) {
+        return 'http://$localIP:3000';
+      }
+      return 'http://localhost:3000';
+    }
+    return 'https://192.168.1.69:3000';
+  }
+
+  // Convert a relative URL to absolute URL
+  static String getFullUrl(String? relativeUrl) {
+    if (relativeUrl == null || relativeUrl.isEmpty) {
+      return '';
+    }
+    // If already absolute URL, return as-is
+    if (relativeUrl.startsWith('http://') || relativeUrl.startsWith('https://') || relativeUrl.startsWith('data:')) {
+      return relativeUrl;
+    }
+    // Prepend base URL
+    return '$baseUrl$relativeUrl';
+  }
+
   static const String tokenKey = 'auth_token';
   static const String userKey = 'user_data';
 }
