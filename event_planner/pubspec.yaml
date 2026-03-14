@@ -1,0 +1,78 @@
+name: event_planner
+description: Event Planner mobile application
+
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  provider: ^6.1.1
+
+  # Networking
+  http: ^1.1.0
+  dio: ^5.4.0
+
+  # Secure Storage for JWT
+  flutter_secure_storage: ^9.0.0
+
+  # Local Storage for saved events
+  shared_preferences: ^2.2.2
+
+  # Date/Time
+  intl: ^0.18.1
+
+  # Form Validation
+  form_field_validator: ^1.1.0
+
+  # Navigation
+  go_router: ^13.0.1
+
+  # UI Helpers
+  google_fonts: ^6.1.0
+  flutter_svg: ^2.0.9
+
+  # Environment Variables
+  flutter_dotenv: ^5.1.0
+
+  # Push Notifications
+  flutter_local_notifications: ^17.0.0
+
+  # Image Picker
+  image_picker: ^1.0.7
+
+  # Share functionality
+  share_plus: ^7.2.2
+
+  # URL Launcher
+  url_launcher: ^6.2.4
+
+  # Cached Network Image
+  cached_network_image: ^3.3.1
+
+  # QR Code
+  qr_flutter: ^4.1.0
+
+  # Google Maps
+  google_maps_flutter: ^2.5.3
+
+  # Palette Generator for dynamic theming
+  palette_generator: ^0.3.3+4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/SplashScreen.gif
+    - .env
