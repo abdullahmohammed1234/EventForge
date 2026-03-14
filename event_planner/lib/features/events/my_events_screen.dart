@@ -361,6 +361,71 @@ class _RegisteredTab extends StatelessWidget {
   }
 }
 
+class _SavedTab extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final eventsProvider = context.watch<EventsProvider>();
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        await eventsProvider.fetchSavedEvents(refresh: true);
+      },
+      child: eventsProvider.isLoading && eventsProvider.savedEvents.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : eventsProvider.savedEvents.isEmpty
+              ? ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                  children: [
+                    Column(
+                      children: [
+                        Icon(
+                          Icons.bookmark_border,
+                          size: 72,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No saved events',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Save events to see them here!',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: () => context.go('/events'),
+                          child: const Text('Discover Events'),
+                        ),
+                      ],
+                    ),
+                  ],
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: eventsProvider.savedEvents.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 16),
+                  itemBuilder: (context, index) {
+                    final event = eventsProvider.savedEvents[index];
+                    return _SavedEventCard(event: event);
+                  },
+                ),
+    );
+  }
+}
+
 class _SavedEventCard extends StatelessWidget {
   final Event event;
 
