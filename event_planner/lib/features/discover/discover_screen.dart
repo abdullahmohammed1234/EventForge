@@ -49,7 +49,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         children: [
           // Custom Discover Header
           const DiscoverHeader(),
-          
+          const SizedBox(height: 12),
           // Category List
           const SizedBox(height: 12),
           CategoryList(
@@ -57,9 +57,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             selectedIndex: _selectedCategoryIndex,
             onCategorySelected: _onCategorySelected,
           ),
-          
+
           const SizedBox(height: 12),
-          
+
           // Events List
           Expanded(
             child: _buildEventsList(),

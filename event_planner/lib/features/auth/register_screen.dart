@@ -41,16 +41,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
 
       final authProvider = context.read<AuthProvider>();
-
+      
       final success = await authProvider.register(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         displayName: _displayNameController.text.trim().isEmpty
             ? null
             : _displayNameController.text.trim(),
-        city: _cityController.text.trim().isEmpty
-            ? null
-            : _cityController.text.trim(),
+        city: _cityController.text.trim().isEmpty ? null : _cityController.text.trim(),
       );
 
       if (success && mounted) {
@@ -64,14 +62,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final authProvider = context.watch<AuthProvider>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create Account'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/landing'),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFFFE4C1),
+              Color(0xFFF2B8D7),
+              Color(0xFFF062AE),
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
         ),
-      ),
-      body: SafeArea(
+        child: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Form(
@@ -80,35 +83,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Icon(
-                  Icons.event_available,
-                  size: 60,
-                  color: Colors.blue,
+                  Icons.back_hand_outlined,
+                  size: 80,
+                  color: Color(0xFFF062AE),
                 ),
                 const SizedBox(height: 16),
-                Text(
-                  'Join ${AppConfig.appName}',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Create your account to get started',
+                const Text(
+                  'Create an Account',
                   style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFF062AE),
                   ),
-                  textAlign: TextAlign.center,
+                  textAlign: TextAlign.left,
                 ),
                 const SizedBox(height: 32),
                 TextFormField(
                   controller: _displayNameController,
                   decoration: const InputDecoration(
-                    labelText: 'Display Name (optional)',
-                    prefixIcon: Icon(Icons.person_outline),
-                    border: OutlineInputBorder(),
+                    labelText: 'Username',
+                    labelStyle: TextStyle(color: Colors.white70),
+                    prefixIcon: Icon(Icons.person_outline, color: Colors.white70),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white70),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -117,8 +118,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(
                     labelText: 'Email',
-                    prefixIcon: Icon(Icons.email_outlined),
-                    border: OutlineInputBorder(),
+                    labelStyle: TextStyle(color: Colors.white70),
+                    prefixIcon: Icon(Icons.email_outlined, color: Colors.white70),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white70),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white),
+                    ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -145,12 +152,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   obscureText: _obscurePassword,
                   decoration: InputDecoration(
                     labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outline),
+                    labelStyle: const TextStyle(color: Colors.white70),
+                    prefixIcon: const Icon(Icons.lock_outline, color: Colors.white70),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword
                             ? Icons.visibility_outlined
                             : Icons.visibility_off_outlined,
+                        color: Colors.white70,
                       ),
                       onPressed: () {
                         setState(() {
@@ -158,7 +167,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         });
                       },
                     ),
-                    border: const OutlineInputBorder(),
+                    enabledBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white70),
+                    ),
+                    focusedBorder: const UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white),
+                    ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -176,8 +190,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   obscureText: _obscurePassword,
                   decoration: const InputDecoration(
                     labelText: 'Confirm Password',
-                    prefixIcon: Icon(Icons.lock_outline),
-                    border: OutlineInputBorder(),
+                    labelStyle: TextStyle(color: Colors.white70),
+                    prefixIcon: Icon(Icons.lock_outline, color: Colors.white70),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white70),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white),
+                    ),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -202,25 +222,38 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ],
                 const SizedBox(height: 24),
                 ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 56),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(32),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   onPressed: authProvider.isLoading ? null : _handleRegister,
                   child: authProvider.isLoading
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
-                      : const Text('Create Account'),
+                      : const Text('Sign up'),
                 ),
                 const SizedBox(height: 24),
                 Text.rich(
                   TextSpan(
-                    text: 'Already have an account? ',
+                    text: 'Have an account? ',
                     children: [
                       TextSpan(
-                        text: 'Login',
+                        text: 'Sign in',
                         style: const TextStyle(
-                          color: Colors.blue,
-                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                          fontWeight: FontWeight.w800,
+                          decoration: TextDecoration.underline,
                         ),
                         recognizer: TapGestureRecognizer()
                           ..onTap = () {
@@ -234,6 +267,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ],
             ),
           ),
+        ),
         ),
       ),
     );
