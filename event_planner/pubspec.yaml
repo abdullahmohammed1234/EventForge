@@ -76,18 +76,19 @@ flutter:
 
   assets:
     - assets/SplashScreen.gif
-    - assets/Group35.png
     - assets/image_42.png
     - assets/image_49.png
     - assets/image_50.png
+    - assets/playstore.png
+    - assets/appstore.png
     - .env
 
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/Group35.png"
+  image_path: "assets/playstore.png"
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/Group35.png"
+  adaptive_icon_foreground: "assets/playstore.png"
   min_sdk: 21
   background_color: "#FFFFFF"
-  padding: 0.35
+  padding: 0.5
