@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../auth/auth_provider.dart';
@@ -344,10 +345,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onPressed: () async {
                     await authProvider.logout();
                     if (mounted) {
-                      Navigator.of(context).pushNamedAndRemoveUntil(
-                        '/login',
-                        (route) => false,
-                      );
+                      context.go('/login');
                     }
                   },
                   child: const Text(
@@ -665,10 +663,7 @@ class PersonalInformationScreen extends StatelessWidget {
                   onPressed: () async {
                     await authProvider.logout();
                     if (context.mounted) {
-                      Navigator.of(context).pushNamedAndRemoveUntil(
-                        '/login',
-                        (route) => false,
-                      );
+                      context.go('/login');
                     }
                   },
                   child: const Text(

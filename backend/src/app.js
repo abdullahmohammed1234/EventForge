@@ -65,26 +65,14 @@ app.get('/', (req, res) => {
   });
 });
 
-// Serve uploaded files with fallback for missing files
+// Serve uploaded files with CORS support
 const uploadsPath = path.join(__dirname, '../uploads');
-app.use('/uploads', (req, res, next) => {
-  const filePath = path.join(uploadsPath, req.path);
-  const fs = require('fs');
-  
-  // Check if file exists
-  if (fs.existsSync(filePath)) {
-    express.static(uploadsPath)(req, res, next);
-  } else {
-    // File doesn't exist - serve a default placeholder or return 404 with a clear message
-    // For now, return a transparent 1x1 PNG as fallback
-    const defaultImage = Buffer.from(
-      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
-      'base64'
-    );
-    res.set('Content-Type', 'image/png');
-    res.send(defaultImage);
-  }
-});
+app.use('/uploads', cors({
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}), express.static(uploadsPath));
 
 // API routes
 app.use('/api/auth', authRoutes);

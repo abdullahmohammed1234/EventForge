@@ -242,17 +242,31 @@ router.put(
 );
 
 /**
- * @desc    Delete event
- * @route   DELETE /api/events/:id
- * @access  Private (Owner only)
- */
-router.delete('/:id', auth, asyncWrapper(eventsController.deleteEvent));
-
-/**
  * @desc    Upload event cover image
  * @route   POST /api/events/upload-cover
  * @access  Private
  */
 router.post('/upload-cover', auth, asyncWrapper(eventsController.uploadEventCover));
+
+/**
+ * @desc    Get event by ID
+ * @route   GET /api/events/:id
+ * @access  Public
+ */
+router.get('/:id', optionalAuth, asyncWrapper(eventsController.getEvent));
+
+/**
+ * @desc    Update event
+ * @route   PUT /api/events/:id
+ * @access  Private (Owner only)
+ */
+router.put('/:id', auth, asyncWrapper(eventsController.updateEvent));
+
+/**
+ * @desc    Delete event
+ * @route   DELETE /api/events/:id
+ * @access  Private (Owner only)
+ */
+router.delete('/:id', auth, asyncWrapper(eventsController.deleteEvent));
 
 module.exports = router;

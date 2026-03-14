@@ -222,7 +222,11 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         tags: _tagsController.text.isEmpty
             ? []
             : _tagsController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
-        coverImageUrl: _coverImageUrl,
+        coverImageUrl: _coverImageUrl != null && _coverImageUrl!.isNotEmpty
+            ? (_coverImageUrl!.startsWith('http://') || _coverImageUrl!.startsWith('https://')
+                ? _coverImageUrl! // Keep full Cloudinary URL
+                : _coverImageUrl!.replaceAll(AppConfig.baseUrl, '')) // Strip local URL
+            : null,
       );
 
       if (success && mounted) {

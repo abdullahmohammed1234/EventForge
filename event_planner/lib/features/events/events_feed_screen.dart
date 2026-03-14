@@ -386,7 +386,7 @@ class EventCard extends StatelessWidget {
                   ),
                   child: event.coverImageUrl != null
                       ? Image.network(
-                          AppConfig.getFullUrl(event.coverImageUrl),
+                          event.coverImageUrl!,
                           height: 180,
                           width: double.infinity,
                           fit: BoxFit.cover,

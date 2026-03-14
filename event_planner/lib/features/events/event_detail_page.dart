@@ -134,9 +134,6 @@ class _EventDetailPageState extends State<EventDetailPage>
       if (event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty) {
         // Build the full URL if needed
         String coverImageUrl = event.coverImageUrl!;
-        if (!coverImageUrl.startsWith('data:image') && !coverImageUrl.startsWith('http')) {
-          coverImageUrl = '${AppConfig.apiBaseUrl.replaceAll('/api', '')}$coverImageUrl';
-        }
         // Extract colors from the event image
         await _themeController.extractColorsFromImage(NetworkImage(coverImageUrl));
       } else {
@@ -278,9 +275,6 @@ Join me at this event!
     if (event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty) {
       // Convert relative URL to absolute URL
       String coverImageUrl = event.coverImageUrl!;
-      if (!coverImageUrl.startsWith('data:image') && !coverImageUrl.startsWith('http')) {
-        coverImageUrl = '${AppConfig.apiBaseUrl.replaceAll('/api', '')}$coverImageUrl';
-      }
       return CachedNetworkImage(
         imageUrl: coverImageUrl,
         fit: BoxFit.cover,

@@ -142,8 +142,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   controller: _cityController,
                   decoration: const InputDecoration(
                     labelText: 'City (optional)',
-                    prefixIcon: Icon(Icons.location_city_outlined),
-                    border: OutlineInputBorder(),
+                    labelStyle: TextStyle(color: Colors.white70),
+                    prefixIcon: Icon(Icons.location_city_outlined, color: Colors.white70),
+                    enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white70),
+                    ),
+                    focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),

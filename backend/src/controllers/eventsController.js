@@ -661,8 +661,36 @@ uploadEventCover = asyncWrapper(async (req, res, next) => {
       return next(new APIError('No file uploaded', 400));
     }
 
-    // Return the image URL
-    const imageUrl = `/uploads/${req.file.filename}`;
+    // Debug: log what we got from upload
+    console.log('Upload result:', {
+      path: req.file.path,
+      filename: req.file.filename
+    });
+
+    // Check if using Cloudinary or local storage
+    let imageUrl;
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const isUsingCloudinary = cloudName && 
+      req.file.path && 
+      req.file.path.includes(cloudName);
+    
+    if (isUsingCloudinary) {
+      // Construct full Cloudinary URL
+      // Cloudinary returns path like: dfk66zbjp/image/upload/v1234567890/folder/filename
+      // We need: https://res.cloudinary.com/dfk66zbjp/image/upload/v1234567890/folder/filename
+      if (req.file.path.startsWith('http')) {
+        imageUrl = req.file.path;
+      } else if (req.file.path.startsWith('//')) {
+        imageUrl = 'https:' + req.file.path;
+      } else {
+        // It's a path - prepend the full URL
+        imageUrl = `https://res.cloudinary.com/${req.file.path}`;
+      }
+      console.log('Cloudinary URL:', imageUrl);
+    } else {
+      // Local storage URL
+      imageUrl = `/uploads/${req.file.filename}`;
+    }
 
     res.json({
       success: true,

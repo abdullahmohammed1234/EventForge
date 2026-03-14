@@ -7,6 +7,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/api/event_service.dart';
 import '../../core/config/app_config.dart';
 
+// Top-level helper function to process image URLs
+// Ensures images work across different platforms (web, iOS, Android)
+String _getProcessedImageUrl(String? url) {
+  if (url == null || url.isEmpty) {
+    return '';
+  }
+  // If it's already a full URL (http or https), return as-is
+  // This handles Cloudinary URLs and other external URLs
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  // If it's a relative URL, convert to full URL using current config
+  return AppConfig.getFullUrl(url);
+}
+
 class SubEvent {
   final String id;
   final String title;
@@ -350,7 +365,7 @@ class Event {
       registrationId: json['registrationId'],
       isUserSaved: json['isUserSaved'] ?? false,
       coverImageUrl: (json['coverImageUrl'] is String && json['coverImageUrl'].isNotEmpty) 
-          ? '${AppConfig.apiBaseUrl.replaceAll('/api', '')}${json['coverImageUrl']}' 
+          ? _getProcessedImageUrl(json['coverImageUrl'])
           : null,
       tags: tagsList,
       organizer: organizer,
