@@ -219,9 +219,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   Widget _buildScreen1() {
     // Local asset images and their labels
     final cardData = [
-      {'image': 'assets/image 42.png', 'label': 'Discover Events'},
-      {'image': 'assets/image 49.png', 'label': 'Creative Events'},
-      {'image': 'assets/image 50.png', 'label': 'Concerts'},
+      {'image': 'assets/image_42.png', 'label': 'Discover Events'},
+      {'image': 'assets/image_49.png', 'label': 'Creative Events'},
+      {'image': 'assets/image_50.png', 'label': 'Concerts'},
     ];
     
     return FadeTransition(
