@@ -1,14 +1,17 @@
-# EventForge - Full-Stack Prototype
+# EventForge - Full-Stack Event Planning Platform
 
-A production-ready full-stack prototype for an event planning platform built with Flutter, Node.js, Express, and MongoDB Atlas.
+A production-ready full-stack event planning platform built with Flutter, Node.js, Express, MongoDB Atlas, and Cloudinary.
 
 ## 📋 Project Overview
 
-This is Phase 1 of the Event Planner application, which includes:
+EventForge is a mobile application for discovering, creating, and managing local events. Users can:
 
-- User registration & login with JWT authentication
-- Event creation and viewing
-- Clean, scalable architecture ready for future features
+- **Authentication**: Register and login with email/password
+- **Discover Events**: Browse events by category and city
+- **Create Events**: Create events with cover images, categories, locations, and dates
+- **Manage Events**: View, save, and register for events
+- **User Profiles**: Manage profile with avatar and personal information
+- **Safety Center**: Access emergency contacts and safety information for events
 
 ## 🏗 Architecture
 
@@ -17,12 +20,13 @@ This is Phase 1 of the Event Planner application, which includes:
 - **Stack**: Node.js, Express, MongoDB Atlas, Mongoose, JWT
 - **Structure**: MVC pattern with controllers, routes, models, middleware
 - **Security**: bcrypt password hashing, JWT auth, helmet, cors, express-validator, morgan
+- **Storage**: Local file uploads + Cloudinary for cloud image storage
 
 ### Frontend (Flutter)
 
 - **State Management**: Provider
 - **Storage**: flutter_secure_storage for JWT tokens
-- **HTTP Client**: dio, http
+- **HTTP Client**: http package
 
 ## 🚀 Getting Started
 
@@ -31,6 +35,7 @@ This is Phase 1 of the Event Planner application, which includes:
 - Node.js 18+
 - Flutter SDK 3.0+
 - MongoDB Atlas account
+- Cloudinary account (optional, for cloud image storage)
 
 ---
 
@@ -52,6 +57,11 @@ MONGODB_URI=your_mongodb_atlas_connection_string
 JWT_SECRET=your_secure_jwt_secret
 JWT_EXPIRES_IN=7d
 FRONTEND_URL=http://localhost:3001
+
+# Cloudinary Configuration (optional - for cloud image storage)
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 ```
 
 ### 2. Install Dependencies
@@ -75,27 +85,37 @@ The API will be available at `http://localhost:3000`
 
 ### 4. API Endpoints
 
-| Method | Endpoint                | Description                   | Auth |
-| ------ | ----------------------- | ----------------------------- | ---- |
-| POST   | `/api/auth/register`    | Register new user             | No   |
-| POST   | `/api/auth/login`       | Login user                    | No   |
-| GET    | `/api/auth/me`          | Get current user              | Yes  |
-| POST   | `/api/auth/logout`      | Logout user                   | Yes  |
-| GET    | `/api/events`           | Get all events (with filters) | No   |
-| GET    | `/api/events/my-events` | Get user's created events     | Yes  |
-| GET    | `/api/events/:id`       | Get event by ID               | No   |
-| POST   | `/api/events`           | Create event                  | Yes  |
-| PUT    | `/api/events/:id`       | Update event                  | Yes  |
-| DELETE | `/api/events/:id`       | Delete event                  | Yes  |
+| Method | Endpoint | Description | Auth |
+| ------ | ----------------------- | -------------------------------- | ---- |
+| POST | `/api/auth/register` | Register new user | No |
+| POST | `/api/auth/login` | Login user | No |
+| GET | `/api/auth/me` | Get current user | Yes |
+| POST | `/api/auth/logout` | Logout user | Yes |
+| PUT | `/api/auth/profile` | Update user profile | Yes |
+| POST | `/api/auth/upload-avatar` | Upload user avatar | Yes |
+| GET | `/api/events` | Get all events (with filters) | No |
+| GET | `/api/events/my-events` | Get user's created events | Yes |
+| GET | `/api/events/registered` | Get events user registered for | Yes |
+| GET | `/api/events/saved` | Get user's saved events | Yes |
+| GET | `/api/events/:id` | Get event by ID | No |
+| POST | `/api/events` | Create event | Yes |
+| PUT | `/api/events/:id` | Update event | Yes |
+| DELETE | `/api/events/:id` | Delete event | Yes |
+| POST | `/api/events/upload-cover` | Upload event cover image | Yes |
+| POST | `/api/events/:id/register` | Register for event | Yes |
+| POST | `/api/events/:id/unregister` | Unregister from event | Yes |
+| POST | `/api/events/:id/save` | Save event | Yes |
+| POST | `/api/events/:id/unsave` | Unsave event | Yes |
 
 ### Query Parameters for GET /api/events
 
-| Parameter | Type    | Description                                                                                  |
-| --------- | ------- | -------------------------------------------------------------------------------------------- |
-| page      | integer | Page number (default: 1)                                                                     |
-| limit     | integer | Items per page (default: 20)                                                                 |
-| city      | string  | Filter by city                                                                               |
-| category  | string  | Filter by category (music, sports, arts, food, technology, business, social, outdoor, other) |
+| Parameter | Type | Description |
+| --------- | ---- | -------------------------------------------------------------------------------------------- |
+| page | integer | Page number (default: 1) |
+| limit | integer | Items per page (default: 20) |
+| city | string | Filter by city |
+| category | string | Filter by category (music, sports, arts, food, technology, business, social, outdoor, other) |
+| search | string | Search events by title/description |
 
 ---
 
@@ -113,10 +133,15 @@ flutter pub get
 Edit `lib/core/config/app_config.dart` if your backend runs on a different URL:
 
 ```dart
-static const String apiBaseUrl = 'http://192.168.4.28:3000/api'; // Default
+static const String apiBaseUrl = 'http://192.168.x.x:3000/api'; // Your local IP
 // For Android Emulator use: http://10.0.2.2:3000/api
 // For iOS Simulator use: http://localhost:3000/api
 // For Physical device use: http://YOUR_IP:3000/api
+```
+
+Also update `event_planner/.env`:
+```
+LOCAL_IP=192.168.x.x  # Your computer's local IP address
 ```
 
 ### 3. Run Flutter App
@@ -125,6 +150,21 @@ static const String apiBaseUrl = 'http://192.168.4.28:3000/api'; // Default
 cd event_planner
 flutter run
 ```
+
+---
+
+## ☁️ Cloudinary Setup (Optional)
+
+For cloud image storage that works across all devices:
+
+1. Create a free Cloudinary account at https://cloudinary.com
+2. Get your credentials from the Cloudinary Dashboard:
+   - Cloud Name
+   - API Key
+   - API Secret
+3. Add credentials to `backend/.env`
+
+If Cloudinary is not configured, images will be stored locally (only works on the computer running the backend).
 
 ---
 
@@ -151,6 +191,8 @@ flutter run
    - Copy the connection string
    - Replace `<password>` with your database user's password
 
+---
+
 ## 📁 Project Structure
 
 ### Backend
@@ -158,14 +200,14 @@ flutter run
 ```
 backend/
 ├── src/
-│   ├── config/         # Database configuration
+│   ├── config/         # Database & Cloudinary configuration
 │   ├── controllers/    # Business logic
 │   ├── middleware/     # Auth, error handling
 │   ├── models/         # Mongoose schemas
-│   ├── routes/        # API routes
-│   ├── utils/         # Helper utilities
-│   └── app.js         # Express app
-├── server.js          # Entry point
+│   ├── routes/         # API routes
+│   ├── utils/          # Helper utilities (upload, etc.)
+│   └── app.js          # Express app
+├── server.js           # Entry point
 ├── package.json
 └── .env.example
 ```
@@ -181,8 +223,12 @@ event_planner/
 │   │   └── utils/         # Helper utilities
 │   ├── features/
 │   │   ├── auth/          # Login, register, auth provider
-│   │   ├── events/        # Events feed, create, provider
-│   │   └── profile/       # Profile screen
+│   │   ├── events/        # Events feed, create, detail, provider
+│   │   ├── discover/      # Discover screen with categories
+│   │   ├── profile/       # Profile screen
+│   │   ├── search/        # Search functionality
+│   │   ├── safety/        # Safety center
+│   │   └── notifications/ # Notifications
 │   └── main.dart
 ├── pubspec.yaml
 └── android/
@@ -195,11 +241,11 @@ event_planner/
 - Never commit `.env` files to version control
 - Change JWT_SECRET in production
 - Use HTTPS in production
-- Implement rate limiting for API endpoints (Phase 2)
+- Configure Cloudinary for production image storage
 
 ---
 
-## 🛠 Future Features (Phase 2+)
+## 🛠 Future Features
 
 - Groups functionality
 - Real-time chat
