@@ -6,6 +6,7 @@ import 'events_provider.dart';
 import '../auth/auth_provider.dart';
 import '../groups/your_groups_screen.dart';
 import '../discover/widgets/discover_header.dart';
+import '../discover/widgets/category_item.dart';
 
 class EventsFeedScreen extends StatefulWidget {
   const EventsFeedScreen({super.key});
@@ -16,9 +17,22 @@ class EventsFeedScreen extends StatefulWidget {
 
 class _EventsFeedScreenState extends State<EventsFeedScreen> {
   final ScrollController _scrollController = ScrollController();
-  
+
   // Track which view is selected: 0 = Discover Events, 1 = Your Groups
   int _selectedView = 0;
+
+  //track which category is selected
+  int _selectedCategoryIndex = 0;
+
+  final List<CategoryData> _categories = const [
+    CategoryData(label: 'All', icon: Icons.apps),
+    CategoryData(label: 'Music', icon: Icons.music_note),
+    CategoryData(label: 'Food', icon: Icons.restaurant),
+    CategoryData(label: 'Sports', icon: Icons.sports_basketball),
+    CategoryData(label: 'Arts', icon: Icons.palette),
+    CategoryData(label: 'Tech', icon: Icons.computer),
+    CategoryData(label: 'Social', icon: Icons.people),
+  ];
 
   @override
   void initState() {
@@ -69,7 +83,9 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
               });
             },
           ),
-          
+          const SizedBox(height: 12),
+          if (_selectedView == 0) _buildCategoryBar(),
+
           // Content area - switch between views
           Expanded(
             child: _selectedView == 0
@@ -83,6 +99,27 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
 
   Widget _buildYourGroupsTab() {
     return const YourGroupsScreen();
+  }
+
+  Widget _buildCategoryBar() {
+    return CategoryList(
+      categories: _categories,
+      selectedIndex: _selectedCategoryIndex,
+      onCategorySelected: (index) {
+        setState(() {
+          _selectedCategoryIndex = index;
+        });
+
+        final label = _categories[index].label;
+
+        final category = label == 'All' ? null : label.toLowerCase();
+
+        context.read<EventsProvider>().fetchEvents(
+              refresh: true,
+              category: category,
+            );
+      },
+    );
   }
 
   Widget _buildDiscoverEventsTab(EventsProvider eventsProvider) {
@@ -321,150 +358,147 @@ class EventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
-        onTap: () => context.push('/events/${event.id}'),
-        borderRadius: BorderRadius.circular(12),
+    return GestureDetector(
+      onTap: () => context.push('/events/${event.id}'),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 18),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              blurRadius: 10,
+              color: Colors.black.withOpacity(0.05),
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Event Image
-            if (event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty)
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(12),
+            // IMAGE
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(18),
+                  ),
+                  child: event.coverImageUrl != null
+                      ? Image.network(
+                          event.coverImageUrl!,
+                          height: 180,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        )
+                      : Container(
+                          height: 180,
+                          color: Colors.grey[300],
+                        ),
                 ),
-                child: Image.network(
-                  event.coverImageUrl!,
-                  height: 150,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return _buildCategoryBanner();
-                  },
+
+                // bookmark / like
+                Positioned(
+                  right: 10,
+                  top: 10,
+                  child: GestureDetector(
+                    onTap: () => _toggleBookmark(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        event.isUserSaved
+                            ? Icons.bookmark
+                            : Icons.bookmark_border,
+                        color: const Color(0xFFFE76B8),
+                        size: 20,
+                      ),
+                    ),
+                  ),
                 ),
-              )
-            else
-              _buildCategoryBanner(),
+              ],
+            ),
+
+            // CONTENT
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          event.title,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
+                  // title
+                  Text(
+                    event.title,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.calendar_today,
-                        size: 16,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _formatDate(event.startTime),
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
+
+                  const SizedBox(height: 6),
+
+                  // location + date
+                  Text(
+                    "${event.city} • ${_formatDate(event.startTime)}",
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.location_on,
-                        size: 16,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          event.city,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (event.description != null &&
-                      event.description!.isNotEmpty) ...[
-                    const SizedBox(height: 12),
+
+                  const SizedBox(height: 6),
+
+                  // creator
+                  if (event.creatorName != null)
                     Text(
-                      event.description!,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                      "By ${event.creatorName}",
                       style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[700],
+                        fontSize: 13,
+                        color: Colors.grey[500],
                       ),
                     ),
-                  ],
-                  if (event.creatorName != null) ...[
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.person,
-                          size: 16,
-                          color: Colors.grey,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'By ${event.creatorName}',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey[600],
+
+                  const SizedBox(height: 10),
+
+                  // bottom row (avatars + going)
+                  Row(
+                    children: [
+                      // avatar image
+                      Row(
+                        children: List.generate(
+                          3,
+                          (index) => Container(
+                            margin: const EdgeInsets.only(right: 4),
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.grey[300],
                             ),
                           ),
                         ),
-                        IconButton(
-                          onPressed: () => _toggleBookmark(context),
-                          icon: Icon(
-                            event.isUserSaved ? Icons.bookmark : Icons.bookmark_border,
-                            color: event.isUserSaved ? Colors.blue : Colors.grey,
-                          ),
-                          tooltip: event.isUserSaved ? 'Remove from saved' : 'Save event',
-                        ),
-                      ],
-                    ),
-                  ] else ...[
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: IconButton(
-                        onPressed: () => _toggleBookmark(context),
-                        icon: Icon(
-                          event.isUserSaved ? Icons.bookmark : Icons.bookmark_border,
-                          color: event.isUserSaved ? Colors.blue : Colors.grey,
-                        ),
-                        tooltip: event.isUserSaved ? 'Remove from saved' : 'Save event',
                       ),
-                    ),
-                  ],
+
+                      const SizedBox(width: 6),
+
+                      Text(
+                        "+ going",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+
+                      const Spacer(),
+
+                      Icon(
+                        Icons.ios_share,
+                        size: 20,
+                        color: Colors.grey[600],
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),

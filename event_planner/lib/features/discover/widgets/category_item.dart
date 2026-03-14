@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// A reusable category item widget for the Discover page.
-/// 
+///
 /// Used to display category pills/chips for filtering events.
 class CategoryItem extends StatelessWidget {
   /// The label text to display
