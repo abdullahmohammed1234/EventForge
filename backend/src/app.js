@@ -11,6 +11,7 @@ const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 
 const authRoutes = require('./routes/authRoutes');
 const eventsRoutes = require('./routes/eventsRoutes');
+const mapsRoutes = require('./routes/mapsRoutes');
 
 // Initialize Express app
 const app = express();
@@ -77,6 +78,7 @@ app.use('/uploads', cors({
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/events', eventsRoutes);
+app.use('/api/maps', mapsRoutes);
 
 // API documentation endpoint
 app.get('/api', (req, res) => {

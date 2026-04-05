@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/api/maps_service.dart';
 import 'events_provider.dart';
 import '../auth/auth_provider.dart';
 
@@ -63,24 +64,25 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   }
 
   Future<void> _openGoogleMaps(Event event) async {
-    String query;
-    if (event.latitude != null && event.longitude != null &&
-        event.latitude != 0 && event.longitude != 0) {
-      query = '${event.latitude},${event.longitude}';
-    } else {
-      // Use address or city for geocoding
-      final locationString = event.address ?? event.city;
-      if (locationString.isNotEmpty) {
-        query = Uri.encodeComponent(locationString);
-      } else {
-        return; // No location available
-      }
+    final String address = event.address ?? '';
+    final String city = event.city ?? '';
+    
+    if (address.isEmpty && city.isEmpty) {
+      return;
     }
     
-    final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$query');
+    final String searchQuery = address.isNotEmpty 
+        ? (city.isNotEmpty ? '$address, $city' : address)
+        : city;
     
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
+    final result = await MapsService.getOsmSearchUrl(address: searchQuery);
+    if (result != null && result['url'] != null) {
+      final url = Uri.parse(result['url'] as String);
+      try {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } catch (e) {
+        debugPrint('Error opening map: $e');
+      }
     }
   }
 
@@ -95,14 +97,16 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
       if (locationString.isNotEmpty) {
         query = Uri.encodeComponent(locationString);
       } else {
-        return; // No location available
+return; // No location available
       }
     }
     
-    final url = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$query&travelmode=transit');
+    final url = Uri.parse('https://www.openstreetmap.org/directions?from=&to=$query&route=pedestrian');
     
-    if (await canLaunchUrl(url)) {
+    try {
       await launchUrl(url, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('Error opening map: $e');
     }
   }
 
