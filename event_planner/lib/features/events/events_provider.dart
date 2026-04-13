@@ -245,6 +245,13 @@ class Event {
   final double? price;
   final EventLocation? location;
   final bool? isUserOrganizer;
+  
+  // New fields for external sources and hidden gem scoring
+  final String? source;
+  final bool? isExternal;
+  final int? popularityScore;
+  final int? hiddenScore;
+  final int? attendanceEstimate;
 
   Event({
     required this.id,
@@ -277,6 +284,11 @@ class Event {
     this.price,
     this.location,
     this.isUserOrganizer,
+    this.source,
+    this.isExternal,
+    this.popularityScore,
+    this.hiddenScore,
+    this.attendanceEstimate,
   });
 
   factory Event.fromJson(Map<String, dynamic> json) {
@@ -377,6 +389,11 @@ class Event {
       price: json['price'] != null ? (json['price'] as num).toDouble() : null,
       location: eventLocation,
       isUserOrganizer: json['isUserOrganizer'] ?? false,
+      source: json['source'],
+      isExternal: json['isExternal'] ?? false,
+      popularityScore: json['popularityScore'] != null ? (json['popularityScore'] as num).toInt() : null,
+      hiddenScore: json['hiddenScore'] != null ? (json['hiddenScore'] as num).toInt() : null,
+      attendanceEstimate: json['attendanceEstimate'] != null ? (json['attendanceEstimate'] as num).toInt() : null,
     );
   }
 
@@ -411,6 +428,11 @@ class Event {
       'price': price,
       'location': location?.toJson(),
       'isUserOrganizer': isUserOrganizer,
+      'source': source,
+      'isExternal': isExternal,
+      'popularityScore': popularityScore,
+      'hiddenScore': hiddenScore,
+      'attendanceEstimate': attendanceEstimate,
     };
   }
 
@@ -445,6 +467,11 @@ class Event {
     double? price,
     EventLocation? location,
     bool? isUserOrganizer,
+    String? source,
+    bool? isExternal,
+    int? popularityScore,
+    int? hiddenScore,
+    int? attendanceEstimate,
   }) {
     return Event(
       id: id ?? this.id,
@@ -477,6 +504,11 @@ class Event {
       price: price ?? this.price,
       location: location ?? this.location,
       isUserOrganizer: isUserOrganizer ?? this.isUserOrganizer,
+      source: source ?? this.source,
+      isExternal: isExternal ?? this.isExternal,
+      popularityScore: popularityScore ?? this.popularityScore,
+      hiddenScore: hiddenScore ?? this.hiddenScore,
+      attendanceEstimate: attendanceEstimate ?? this.attendanceEstimate,
     );
   }
 }
@@ -502,19 +534,23 @@ class EventsProvider with ChangeNotifier {
     required this.eventService,
     required this.storage,
   }) {
-    _loadRegisteredEvents();
-    _loadSavedEvents();
+    // Loading registered/saved events on init can cause race condition with async storage
+    // They will be loaded lazily when needed, or explicitly after auth check completes
   }
 
   List<Event> get events => _events;
   List<Event> get registeredEvents {
-    // Sort events by date in ascending order (soonest first)
+    if (_registeredEvents.isEmpty) {
+      _loadRegisteredEvents();
+    }
     final sortedEvents = List<Event>.from(_registeredEvents);
     sortedEvents.sort((a, b) => a.startTime.compareTo(b.startTime));
     return sortedEvents;
   }
   List<Event> get savedEvents {
-    // Sort events by date in ascending order (soonest first)
+    if (_savedEvents.isEmpty) {
+      _loadSavedEvents();
+    }
     final sortedEvents = List<Event>.from(_savedEvents);
     sortedEvents.sort((a, b) => a.startTime.compareTo(b.startTime));
     return sortedEvents;
@@ -527,7 +563,9 @@ class EventsProvider with ChangeNotifier {
   bool get hasMore => _hasMore;
 
   Future<String?> _getToken() async {
-    return await storage.read(key: 'auth_token');
+    final token = await storage.read(key: 'auth_token');
+    debugPrint('_getToken: ${token != null ? "Token found" : "Token is NULL"}');
+    return token;
   }
 
   Future<void> _loadRegisteredEvents() async {
@@ -1281,6 +1319,9 @@ class EventsProvider with ChangeNotifier {
         page: 1,
       );
 
+      debugPrint('Saved events response status: ${response.statusCode}');
+      debugPrint('Saved events response body: ${response.body}');
+      
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final List<dynamic> eventsJson = data['data']['events'];
@@ -1289,6 +1330,127 @@ class EventsProvider with ChangeNotifier {
       }
     } catch (e) {
       debugPrint('Error loading saved events: $e');
+    }
+  }
+
+  // New methods for Hidden Gems and Underground feeds
+  Future<bool> fetchHiddenGems({
+    String? city,
+    String? category,
+    int? maxAttendees,
+    bool? isFree,
+    bool refresh = false,
+  }) async {
+    if (refresh) {
+      _currentPage = 1;
+      _hasMore = true;
+      _events = [];
+    }
+
+    if (_isLoading) return false;
+
+    _isLoading = _events.isEmpty;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final token = await _getToken();
+      final response = await eventService.getHiddenGems(
+        city: city,
+        category: category,
+        maxAttendees: maxAttendees,
+        isFree: isFree,
+        page: _currentPage,
+        token: token,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> eventsJson = data['data']['events'];
+        final pagination = data['data']['pagination'];
+
+        final newEvents = eventsJson.map((e) => Event.fromJson(e)).toList();
+
+        if (refresh) {
+          _events = newEvents;
+        } else {
+          _events.addAll(newEvents);
+        }
+
+        _hasMore = _currentPage < pagination['pages'];
+        _currentPage++;
+
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _error = 'Failed to load hidden gems';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = 'Network error: ${e.toString()}';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> fetchUnderground({
+    String? city,
+    bool refresh = false,
+  }) async {
+    if (refresh) {
+      _currentPage = 1;
+      _hasMore = true;
+      _events = [];
+    }
+
+    if (_isLoading) return false;
+
+    _isLoading = _events.isEmpty;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final token = await _getToken();
+      final response = await eventService.getUnderground(
+        city: city,
+        page: _currentPage,
+        token: token,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> eventsJson = data['data']['events'];
+        final pagination = data['data']['pagination'];
+
+        final newEvents = eventsJson.map((e) => Event.fromJson(e)).toList();
+
+        if (refresh) {
+          _events = newEvents;
+        } else {
+          _events.addAll(newEvents);
+        }
+
+        _hasMore = _currentPage < pagination['pages'];
+        _currentPage++;
+
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _error = 'Failed to load underground events';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = 'Network error: ${e.toString()}';
+      _isLoading = false;
+      notifyListeners();
+      return false;
     }
   }
 }

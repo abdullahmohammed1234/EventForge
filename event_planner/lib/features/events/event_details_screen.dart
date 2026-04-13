@@ -75,7 +75,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         ? (city.isNotEmpty ? '$address, $city' : address)
         : city;
     
-    final result = await MapsService.getOsmSearchUrl(address: searchQuery);
+    final result = await MapsService.getOrsSearchUrl(address: address, city: city);
     if (result != null && result['url'] != null) {
       final url = Uri.parse(result['url'] as String);
       try {

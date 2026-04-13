@@ -315,60 +315,35 @@ exports.searchLocations = asyncWrapper(async (req, res) => {
 });
 
 /**
- * Get OpenStreetMap search URL for an address
- * GET /api/maps/osm-search?address=123+Main+St+City
+ * Get Google Maps search URL for an address
+ * GET /api/maps/ors-search?address=123+Main+St&city=City
  */
-exports.getOsmSearchUrl = asyncWrapper(async (req, res) => {
-  const { address } = req.query;
+exports.getOrsSearchUrl = asyncWrapper(async (req, res) => {
+  const { address, city } = req.query;
 
-  if (!address) {
+  let searchQuery;
+  if (address && address.trim()) {
+    searchQuery = city && city.trim() ? `${address}, ${city}` : address;
+  } else if (city && city.trim()) {
+    searchQuery = city;
+  } else {
     return res.status(400).json({
       success: false,
-      error: 'Missing required parameter: address',
+      error: 'Missing required parameter: address or city',
     });
   }
 
-  try {
-    const response = await axios.get(GEOCODING_BASE_URL, {
-      params: {
-        api_key: ORS_API_KEY,
-        text: address,
-        size: 1,
-      },
-    });
+  const orsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchQuery)}`;
 
-    const features = response.data.features;
-    if (!features || features.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'No results found for the given address',
-      });
-    }
-
-    const bestMatch = features[0];
-    const [lng, lat] = bestMatch.geometry.coordinates;
-    const label = bestMatch.properties.label;
-
-    const osmUrl = `https://www.openstreetmap.org/search?query=${encodeURIComponent(label)}`;
-
-    res.json({
-      success: true,
-      data: {
-        url: osmUrl,
-        lat,
-        lng,
-        label,
-      },
-    });
-  } catch (error) {
-    console.error('OpenRouteService OSM Search Error:', error.response?.data || error.message);
-    res.status(502).json({
-      success: false,
-      error: 'Failed to get OSM search URL',
-      details: error.response?.data?.error || error.message,
-    });
-  }
+  res.json({
+    success: true,
+    data: {
+      url: orsUrl,
+      searchQuery,
+    },
+  });
 });
+
 
 /**
  * Helper function to format duration in a readable way

@@ -370,7 +370,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
     return GradientBackground(
       child: Scaffold(
-        backgroundColor: Colors.transparent,
+backgroundColor: Colors.white,
         body: SafeArea(
           child: Column(
             children: [
@@ -387,15 +387,7 @@ class _SearchScreenState extends State<SearchScreen> {
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        AppColors.beige.withOpacity(0.4),
-                        AppColors.peach.withOpacity(0.3),
-                        AppColors.pink.withOpacity(0.2),
-                      ],
-                    ),
+                    color: Colors.white,
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(24),
                       topRight: Radius.circular(24),

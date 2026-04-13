@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../core/api/auth_service.dart';
@@ -56,6 +57,34 @@ class AuthProvider with ChangeNotifier {
   bool _isCheckingAuth = true;
   bool _isLoading = false;
   String? _error;
+  
+  // Static profile image shared between My Events and Profile screens
+  static Uint8List? _profileImage;
+  Uint8List? get profileImage => _profileImage;
+  
+  Future<void> setProfileImage(Uint8List? image) async {
+    _profileImage = image;
+    // Save to persistent storage
+    if (image != null) {
+      final base64Image = base64Encode(image);
+      await storage.write(key: 'profile_image', value: base64Image);
+    } else {
+      await storage.delete(key: 'profile_image');
+    }
+    notifyListeners();
+  }
+  
+  Future<void> _loadProfileImage() async {
+    try {
+      final base64Image = await storage.read(key: 'profile_image');
+      if (base64Image != null) {
+        _profileImage = base64Decode(base64Image);
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Failed to load profile image: $e');
+    }
+  }
 
   AuthProvider({
     required this.authService,
@@ -84,6 +113,8 @@ class AuthProvider with ChangeNotifier {
         if (userData != null) {
           _user = User.fromJson(jsonDecode(userData));
         }
+        // Load profile image from storage
+        await _loadProfileImage();
       }
     } catch (e) {
       _error = 'Error checking auth status';

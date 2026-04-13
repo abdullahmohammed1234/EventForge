@@ -280,6 +280,61 @@ class EventService {
     }
   }
 
+  // Discovery Engine methods
+  Future<http.Response> getHiddenGems({
+    String? city,
+    String? category,
+    int? maxAttendees,
+    bool? isFree,
+    int page = 1,
+    int limit = 20,
+    String? token,
+  }) async {
+    final queryParams = <String, String>{
+      'page': page.toString(),
+      'limit': limit.toString(),
+    };
+    if (city != null && city.isNotEmpty) queryParams['city'] = city;
+    if (category != null && category.isNotEmpty) queryParams['category'] = category;
+    if (maxAttendees != null) queryParams['maxAttendees'] = maxAttendees.toString();
+    if (isFree != null) queryParams['isFree'] = isFree.toString();
+
+    final uri = Uri.parse('$baseUrl${Endpoints.hiddenGems}').replace(
+      queryParameters: queryParams,
+    );
+
+    final headers = {'Content-Type': 'application/json'};
+    if (token != null) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+
+    return _client.get(uri, headers: headers).timeout(const Duration(seconds: 10));
+  }
+
+  Future<http.Response> getUnderground({
+    String? city,
+    int page = 1,
+    int limit = 20,
+    String? token,
+  }) async {
+    final queryParams = <String, String>{
+      'page': page.toString(),
+      'limit': limit.toString(),
+    };
+    if (city != null && city.isNotEmpty) queryParams['city'] = city;
+
+    final uri = Uri.parse('$baseUrl${Endpoints.underground}').replace(
+      queryParameters: queryParams,
+    );
+
+    final headers = {'Content-Type': 'application/json'};
+    if (token != null) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+
+    return _client.get(uri, headers: headers).timeout(const Duration(seconds: 10));
+  }
+
   void dispose() {
     _client.close();
   }
