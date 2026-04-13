@@ -70,6 +70,13 @@ class Endpoints {
   static const String registeredEvents = '/events/registered';
   static const String savedEvents = '/events/saved';
   static const String uploadEventCover = '/events/upload-cover';
+  
+  // Discovery Engine Endpoints
+  static const String discoverFeed = '/discover/feed';
+  static const String hiddenGems = '/discover/hidden-gems';
+  static const String underground = '/discover/underground';
+  static const String externalEvents = '/discover/external';
+  static const String discoveryStats = '/discover/stats';
 }
 
 // Helper method to get event registration endpoint

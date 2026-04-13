@@ -193,20 +193,17 @@ class MapsService {
     return 'https://www.openstreetmap.org/directions?from=$fromLat%2C$fromLng&to=$toLat%2C$toLng&route=pedestrian';
   }
 
-  /// Get OpenStreetMap search URL for an address (address primary, city fallback)
-  static Future<Map<String, dynamic>?> getOsmSearchUrl({
+  /// Get Google Maps search URL for an address (address primary, city fallback)
+  static Future<Map<String, dynamic>?> getOrsSearchUrl({
     required String address,
     String? city,
   }) async {
     try {
       final baseUrl = AppConfig.apiBaseUrl;
-      String searchQuery = address;
-      if (city != null && city.isNotEmpty) {
-        searchQuery = '$address, $city';
-      }
-      final uri = Uri.parse('$baseUrl/maps/osm-search').replace(
+      final uri = Uri.parse('$baseUrl/maps/ors-search').replace(
         queryParameters: {
-          'address': searchQuery,
+          'address': address,
+          if (city != null) 'city': city,
         },
       );
 
@@ -220,7 +217,7 @@ class MapsService {
       }
       return null;
     } catch (e) {
-      print('Error getting OSM search URL: $e');
+      print('Error getting Google Maps URL: $e');
       return null;
     }
   }

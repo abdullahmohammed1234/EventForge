@@ -19,7 +19,7 @@ class EventsFeedScreen extends StatefulWidget {
 class _EventsFeedScreenState extends State<EventsFeedScreen> {
   final ScrollController _scrollController = ScrollController();
 
-  // Track which view is selected: 0 = Discover Events, 1 = Your Groups
+  // Track which view is selected: 0 = Discover, 1 = Your Groups, 2 = Hidden Gems, 3 = Underground
   int _selectedView = 0;
 
   //track which category is selected
@@ -77,29 +77,43 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
               setState(() {
                 _selectedView = 0;
               });
+              context.read<EventsProvider>().fetchEvents(refresh: true);
             },
             onYourGroupsTap: () {
               setState(() {
                 _selectedView = 1;
               });
             },
+            onHiddenGemsTap: () {
+              setState(() {
+                _selectedView = 2;
+              });
+              context.read<EventsProvider>().fetchHiddenGems(refresh: true);
+            },
+            onUndergroundTap: () {
+              setState(() {
+                _selectedView = 3;
+              });
+              context.read<EventsProvider>().fetchUnderground(refresh: true);
+            },
           ),
           const SizedBox(height: 12),
           if (_selectedView == 0) _buildCategoryBar(),
+          if (_selectedView == 2 || _selectedView == 3) _buildNewFiltersBar(),
 
           // Content area - switch between views
           Expanded(
             child: _selectedView == 0
                 ? _buildDiscoverEventsTab(eventsProvider)
-                : _buildYourGroupsTab(),
+                : _selectedView == 2
+                    ? _buildHiddenGemsTab(eventsProvider)
+                    : _selectedView == 3
+                        ? _buildUndergroundTab(eventsProvider)
+                        : _buildYourGroupsTab(),
           ),
         ],
-      ),
+),
     );
-  }
-
-  Widget _buildYourGroupsTab() {
-    return const YourGroupsScreen();
   }
 
   Widget _buildCategoryBar() {
@@ -121,6 +135,48 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
             );
       },
     );
+  }
+
+  Widget _buildNewFiltersBar() {
+    final filters = [
+      CategoryData(label: 'Small Events (<20)', icon: Icons.groups),
+      CategoryData(label: 'Community', icon: Icons.people_outline),
+      CategoryData(label: 'Free', icon: Icons.money_off),
+    ];
+    final labels = filters.map((f) => f.label).toList();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: SizedBox(
+        height: 44,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: filters.length,
+          separatorBuilder: (context, index) => const SizedBox(width: 8),
+          itemBuilder: (context, index) {
+            final filter = filters[index];
+            return CategoryItem(
+              label: filter.label,
+              icon: filter.icon,
+              isSelected: false,
+              onTap: () => _applyFilter(labels[index]),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  void _applyFilter(String filter) async {
+    final provider = context.read<EventsProvider>();
+    if (_selectedView == 2) {
+      if (filter.contains('Small')) {
+        await provider.fetchHiddenGems(refresh: true, maxAttendees: 20);
+      } else if (filter.contains('Free')) {
+        await provider.fetchHiddenGems(refresh: true, isFree: true);
+      }
+    } else if (_selectedView == 3) {
+      await provider.fetchUnderground(refresh: true);
+    }
   }
 
   Widget _buildDiscoverEventsTab(EventsProvider eventsProvider) {
@@ -204,6 +260,114 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
         ),
       ],
     );
+  }
+
+  Widget _buildHiddenGemsTab(EventsProvider eventsProvider) {
+    return Stack(
+      children: [
+        RefreshIndicator(
+          onRefresh: () async {
+            await context.read<EventsProvider>().fetchHiddenGems(refresh: true);
+          },
+          child: eventsProvider.isLoading && eventsProvider.events.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : eventsProvider.events.isEmpty
+                  ? ListView(
+                      children: [
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.diamond_outlined, size: 80, color: Colors.amber[400]),
+                                const SizedBox(height: 16),
+                                Text('No hidden gems found', style: TextStyle(fontSize: 18, color: Colors.grey[600])),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(16),
+                      itemCount: eventsProvider.events.length + (eventsProvider.isLoadingMore ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index >= eventsProvider.events.length) {
+                          return const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()));
+                        }
+                        return EventCard(event: eventsProvider.events[index]);
+                      },
+                    ),
+        ),
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: FloatingActionButton.extended(
+            onPressed: () => context.go('/events/create'),
+            label: const Text('Create Event'),
+            icon: const Icon(Icons.add),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUndergroundTab(EventsProvider eventsProvider) {
+    return Stack(
+      children: [
+        RefreshIndicator(
+          onRefresh: () async {
+            await context.read<EventsProvider>().fetchUnderground(refresh: true);
+          },
+          child: eventsProvider.isLoading && eventsProvider.events.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : eventsProvider.events.isEmpty
+                  ? ListView(
+                      children: [
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.people_outline, size: 80, color: Colors.purple[300]),
+                                const SizedBox(height: 16),
+                                Text('No underground events found', style: TextStyle(fontSize: 18, color: Colors.grey[600])),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(16),
+                      itemCount: eventsProvider.events.length + (eventsProvider.isLoadingMore ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index >= eventsProvider.events.length) {
+                          return const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()));
+                        }
+                        return EventCard(event: eventsProvider.events[index]);
+                      },
+                    ),
+        ),
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: FloatingActionButton.extended(
+            onPressed: () => context.go('/events/create'),
+            label: const Text('Create Event'),
+            icon: const Icon(Icons.add),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildYourGroupsTab() {
+    return const YourGroupsScreen();
   }
 }
 

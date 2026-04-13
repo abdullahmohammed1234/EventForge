@@ -22,7 +22,7 @@ router.get('/reverse-geocode', mapsController.reverseGeocode);
 // GET /api/maps/search - Search for locations by query
 router.get('/search', mapsController.searchLocations);
 
-// GET /api/maps/osm-search - Get OpenStreetMap search URL for an address
-router.get('/osm-search', mapsController.getOsmSearchUrl);
+// GET /api/maps/ors-search - Get OpenRouteService map URL for an address
+router.get('/ors-search', mapsController.getOrsSearchUrl);
 
 module.exports = router;
