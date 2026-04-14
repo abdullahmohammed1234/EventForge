@@ -28,8 +28,6 @@ class AppConfig {
     return 'https://192.168.1.82:3000/api';
   }
 
-<<<<<<< Updated upstream
-=======
   // Get the base URL without /api suffix (for uploads, etc.)
   static String get baseUrl {
     if (kDebugMode) {
@@ -57,7 +55,6 @@ class AppConfig {
     return '$baseUrl$relativeUrl';
   }
 
->>>>>>> Stashed changes
   static const String tokenKey = 'auth_token';
   static const String userKey = 'user_data';
 }

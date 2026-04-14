@@ -28,34 +28,26 @@ class CategoryItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.black : Colors.grey[100],
+          color: isSelected ? const Color(0xFFFE76B8) : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? Colors.black : Colors.grey[300]!,
-            width: 1,
-          ),
+          border: Border.all(color: const Color(0xFFFE76B8)),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            if (icon != null) ...[
-              Icon(
-                icon,
-                size: 16,
-                color: isSelected ? Colors.white : Colors.grey[700],
-              ),
-              const SizedBox(width: 6),
-            ],
+            Icon(
+              icon,
+              size: 16,
+              color: Colors.black, // always black
+            ),
+            const SizedBox(width: 6),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 14,
+              style: const TextStyle(
+                color: Colors.black, // always black
                 fontWeight: FontWeight.w500,
-                color: isSelected ? Colors.white : Colors.grey[800],
               ),
             ),
           ],
