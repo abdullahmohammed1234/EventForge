@@ -59,6 +59,13 @@ class _EventDetailPageState extends State<EventDetailPage>
   bool _isDescriptionExpanded = false;
   bool _isFavorite = false;
 
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _themeController.dispose();
+    super.dispose();
+  }
+
   Future<void> _openGoogleMaps(Event event) async {
     final String address = event.address ?? event.location?.name ?? '';
     final String city = event.city ?? '';
@@ -133,7 +140,7 @@ class _EventDetailPageState extends State<EventDetailPage>
       // Check if event has an image - use image for theme if available
       if (event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty) {
         // Build the full URL if needed
-        String coverImageUrl = event.coverImageUrl!;
+        String coverImageUrl = AppConfig.getFullUrl(event.coverImageUrl);
         // Extract colors from the event image
         await _themeController.extractColorsFromImage(NetworkImage(coverImageUrl));
       } else {
@@ -142,13 +149,6 @@ class _EventDetailPageState extends State<EventDetailPage>
         _themeController.extractColorsFromGradient(categoryColor);
       }
     }
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    _themeController.dispose();
-    super.dispose();
   }
 
   String _formatDate(DateTime date) {
@@ -274,7 +274,7 @@ Join me at this event!
   Widget _buildHeroImage(Event event) {
     if (event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty) {
       // Convert relative URL to absolute URL
-      String coverImageUrl = event.coverImageUrl!;
+      String coverImageUrl = AppConfig.getFullUrl(event.coverImageUrl);
       return CachedNetworkImage(
         imageUrl: coverImageUrl,
         fit: BoxFit.cover,

@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../auth/auth_provider.dart';
 import 'events_provider.dart';
+import '../../core/config/app_config.dart';
 
 const accent = Color(0xFFF062AE);
 
@@ -471,7 +472,7 @@ class _SavedEventCard extends StatelessWidget {
           children: [
             if (event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty)
               Image.network(
-                event.coverImageUrl!,
+                AppConfig.getFullUrl(event.coverImageUrl),
                 height: 120,
                 width: double.infinity,
                 fit: BoxFit.cover,
@@ -727,7 +728,7 @@ class _RegisteredEventCard extends StatelessWidget {
               height: 96,
               child: event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty
                   ? Image.network(
-                      event.coverImageUrl!,
+                      AppConfig.getFullUrl(event.coverImageUrl),
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Container(
                         color: Colors.grey.shade300,
