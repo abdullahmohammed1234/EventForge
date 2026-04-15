@@ -50,7 +50,7 @@ router.get(
   [
     query('page').optional().isInt({ min: 1 }),
     query('limit').optional().isInt({ min: 1, max: 100 }),
-    query('source').optional().isIn(['eventbrite', 'discord', 'telegram']),
+    query('source').optional().isIn(['discord', 'telegram']),
     query('city').optional().trim(),
     query('hiddenScoreMin').optional().isInt({ min: 0, max: 100 }),
     query('isUnderground').optional().isBoolean(),

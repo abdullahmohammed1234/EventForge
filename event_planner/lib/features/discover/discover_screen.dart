@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../events/events_provider.dart';
 import 'widgets/discover_header.dart';
 import 'widgets/category_item.dart';
+import '../../core/config/app_config.dart';
 
 /// Discover screen with custom header and event filtering
 class DiscoverScreen extends StatefulWidget {
@@ -122,7 +123,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: Image.network(
-                          event.coverImageUrl!,
+                          AppConfig.getFullUrl(event.coverImageUrl),
                           width: 56,
                           height: 56,
                           fit: BoxFit.cover,

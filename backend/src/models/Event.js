@@ -177,7 +177,7 @@ const eventSchema = new mongoose.Schema(
     },
     source: {
       type: String,
-      enum: ['eventforge', 'eventbrite', 'discord', 'telegram'],
+      enum: ['eventforge', 'discord', 'telegram'],
       default: 'eventforge',
     },
     isExternal: {

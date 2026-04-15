@@ -11,7 +11,6 @@ const SOURCE_SCORES = {
   discord: 0.9,
   telegram: 0.85,
   eventforge: 0.5,
-  eventbrite: 0.3,
 };
 
 const ATTENDANCE_THRESHOLDS = {

@@ -10,6 +10,7 @@ class DynamicThemeController extends ChangeNotifier {
   bool _isLoading = true;
   bool _hasError = false;
   PaletteGenerator? _paletteGenerator;
+  bool _isDisposed = false;
 
   // Getters
   Color get dominantColor => _dominantColor;
@@ -36,6 +37,8 @@ class DynamicThemeController extends ChangeNotifier {
         timeout: const Duration(seconds: 10),
       );
 
+      if (_isDisposed) return;
+
       // Extract dominant color (with fallback)
       _dominantColor = _paletteGenerator?.dominantColor?.color ?? defaultAccent;
 
@@ -57,6 +60,7 @@ class DynamicThemeController extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     } catch (e) {
+      if (_isDisposed) return;
       _hasError = true;
       _isLoading = false;
       // Use defaults on error
@@ -66,6 +70,12 @@ class DynamicThemeController extends ChangeNotifier {
       _lightVibrantColor = const Color(0xFFA5B4FC);
       notifyListeners();
     }
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
   }
 
   /// Get tinted surface color for bottom sheet
