@@ -46,7 +46,9 @@ class AppConfig {
       return '';
     }
     // If already absolute URL, return as-is
-    if (relativeUrl.startsWith('http://') || relativeUrl.startsWith('https://') || relativeUrl.startsWith('data:')) {
+    if (relativeUrl.startsWith('http://') ||
+        relativeUrl.startsWith('https://') ||
+        relativeUrl.startsWith('data:')) {
       return relativeUrl;
     }
     // Prepend base URL
@@ -70,7 +72,7 @@ class Endpoints {
   static const String registeredEvents = '/events/registered';
   static const String savedEvents = '/events/saved';
   static const String uploadEventCover = '/events/upload-cover';
-  
+
   // Discovery Engine Endpoints
   static const String discoverFeed = '/discover/feed';
   static const String hiddenGems = '/discover/hidden-gems';
