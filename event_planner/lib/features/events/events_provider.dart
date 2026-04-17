@@ -7,21 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/api/event_service.dart';
 import '../../core/config/app_config.dart';
 
-// Top-level helper function to process image URLs
-// Ensures images work across different platforms (web, iOS, Android)
-String _getProcessedImageUrl(String? url) {
-  if (url == null || url.isEmpty) {
-    return '';
-  }
-  // If it's already a full URL (http or https), return as-is
-  // This handles Cloudinary URLs and other external URLs
-  if (url.startsWith('http://') || url.startsWith('https://')) {
-    return url;
-  }
-  // If it's a relative URL, convert to full URL using current config
-  return AppConfig.getFullUrl(url);
-}
-
 class SubEvent {
   final String id;
   final String title;
@@ -31,6 +16,8 @@ class SubEvent {
   final String? location;
   final int? maxAttendees;
   final int currentAttendees;
+  final String? locationName;
+  final String? organizerName;
 
   SubEvent({
     required this.id,
@@ -41,6 +28,8 @@ class SubEvent {
     this.location,
     this.maxAttendees,
     this.currentAttendees = 0,
+    this.locationName,
+    this.organizerName,
   });
 
   factory SubEvent.fromJson(Map<String, dynamic> json) {
@@ -51,7 +40,9 @@ class SubEvent {
       startTime: DateTime.parse(json['startTime']),
       endTime: DateTime.parse(json['endTime']),
       location: json['location'],
-      maxAttendees: json['maxAttendees'] != null ? (json['maxAttendees'] as num).toInt() : null,
+      maxAttendees: json['maxAttendees'] != null
+          ? (json['maxAttendees'] as num).toInt()
+          : null,
       currentAttendees: (json['currentAttendees'] as num?)?.toInt() ?? 0,
     );
   }
@@ -120,10 +111,10 @@ class EventLocation {
   factory EventLocation.fromJson(Map<String, dynamic> json) {
     // Handle nested location object
     final locationData = json['location'] is Map ? json['location'] : json;
-    
+
     double? lat;
     double? lng;
-    
+
     if (locationData != null && locationData['coordinates'] != null) {
       final coords = locationData['coordinates'];
       if (coords is List && coords.length >= 2) {
@@ -136,7 +127,7 @@ class EventLocation {
         }
       }
     }
-    
+
     return EventLocation(
       name: locationData?['name'] ?? json['city'],
       address: json['address'],
@@ -199,7 +190,7 @@ class Attendee {
     return Attendee(
       id: userData?['_id'] ?? userData?['id'] ?? json['id'] ?? '',
       name: userData?['displayName'] ?? userData?['name'],
-      avatarUrl: avatarUrl is String && avatarUrl.isNotEmpty ? AppConfig.getFullUrl(avatarUrl) : null,
+      avatarUrl: avatarUrl is String && avatarUrl.isNotEmpty ? avatarUrl : null,
     );
   }
 
@@ -232,7 +223,10 @@ class Event {
   final bool isUserRegistered;
   final String? registrationId; // Unique QR code ID
   final bool isUserSaved; // Whether the user has saved this event
-  
+
+  final String? locationName;
+  final String? organizerName;
+
   // New fields for dynamic event detail screen
   final String? coverImageUrl;
   final List<String> tags;
@@ -245,13 +239,6 @@ class Event {
   final double? price;
   final EventLocation? location;
   final bool? isUserOrganizer;
-  
-  // New fields for external sources and hidden gem scoring
-  final String? source;
-  final bool? isExternal;
-  final int? popularityScore;
-  final int? hiddenScore;
-  final int? attendanceEstimate;
 
   Event({
     required this.id,
@@ -284,21 +271,17 @@ class Event {
     this.price,
     this.location,
     this.isUserOrganizer,
-    this.source,
-    this.isExternal,
-    this.popularityScore,
-    this.hiddenScore,
-    this.attendanceEstimate,
+    this.locationName,
+    this.organizerName,
   });
 
   factory Event.fromJson(Map<String, dynamic> json) {
     List<SubEvent> subEventsList = [];
     if (json['subEvents'] != null) {
-      subEventsList = (json['subEvents'] as List)
-          .map((e) => SubEvent.fromJson(e))
-          .toList();
+      subEventsList =
+          (json['subEvents'] as List).map((e) => SubEvent.fromJson(e)).toList();
     }
-    
+
     // Extract and validate coordinates
     double? lat;
     double? lng;
@@ -313,7 +296,7 @@ class Event {
         lng = null;
       }
     }
-    
+
     // Build organizer from createdBy field
     Organizer? organizer;
     if (json['createdBy'] != null) {
@@ -322,40 +305,44 @@ class Event {
       organizer = Organizer(
         id: creator['_id'] ?? creator['id'],
         name: creator['displayName'] ?? 'Event Organizer',
-        type: creator['type'] ?? creator['city'] != null ? 'Local Community' : null,
-        avatarUrl: avatarUrl is String && avatarUrl.isNotEmpty ? AppConfig.getFullUrl(avatarUrl) : null,
+        type: creator['type'] ?? creator['city'] != null
+            ? 'Local Community'
+            : null,
+        avatarUrl:
+            avatarUrl is String && avatarUrl.isNotEmpty ? avatarUrl : null,
       );
     }
-    
+
     // Build attendees list
     List<Attendee> attendeesList = [];
     if (json['attendees'] != null) {
-      attendeesList = (json['attendees'] as List)
-          .map((e) => Attendee.fromJson(e))
-          .toList();
+      attendeesList =
+          (json['attendees'] as List).map((e) => Attendee.fromJson(e)).toList();
     }
-    
+
     // Extract tags
     List<String> tagsList = [];
     if (json['tags'] != null) {
       tagsList = (json['tags'] as List).map((e) => e.toString()).toList();
     }
-    
+
     // Extract highlights
     List<String> highlightsList = [];
     if (json['highlights'] != null) {
-      highlightsList = (json['highlights'] as List).map((e) => e.toString()).toList();
+      highlightsList =
+          (json['highlights'] as List).map((e) => e.toString()).toList();
     }
-    
+
     // Build location object
     final eventLocation = EventLocation.fromJson(json);
-    
+
     // Build contact object
     final eventContact = EventContact.fromJson(json);
-    
+
     // Determine if event is free
-    final isFree = json['isFree'] == true || json['price'] == null || json['price'] == 0;
-    
+    final isFree =
+        json['isFree'] == true || json['price'] == null || json['price'] == 0;
+
     return Event(
       id: json['id'] ?? json['_id'],
       title: json['title'],
@@ -367,33 +354,39 @@ class Event {
       longitude: lng,
       startTime: DateTime.parse(json['startTime']),
       endTime: json['endTime'] != null ? DateTime.parse(json['endTime']) : null,
-      maxAttendees: json['maxAttendees'] != null ? (json['maxAttendees'] as num).toInt() : null,
+      locationName:
+          json['location']?['name'] ?? json['address'] ?? json['city'],
+      organizerName: json['organizer']?['type'] ??
+          json['createdBy']?['displayName'] ??
+          'Unknown',
+      maxAttendees: json['maxAttendees'] != null
+          ? (json['maxAttendees'] as num).toInt()
+          : null,
       currentAttendees: (json['currentAttendees'] as num?)?.toInt() ?? 0,
-      createdBy: json['createdBy']?['id'] ?? json['createdBy']?['_id'] ?? json['createdBy'] ?? '',
+      createdBy: json['createdBy']?['id'] ??
+          json['createdBy']?['_id'] ??
+          json['createdBy'] ??
+          '',
       creatorName: json['createdBy']?['displayName'],
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
+      createdAt:
+          DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
       subEvents: subEventsList,
       isUserRegistered: json['isUserRegistered'] ?? false,
       registrationId: json['registrationId'],
       isUserSaved: json['isUserSaved'] ?? false,
-      coverImageUrl: (json['coverImageUrl'] is String && json['coverImageUrl'].isNotEmpty) 
-          ? _getProcessedImageUrl(json['coverImageUrl'])
-          : null,
+      coverImageUrl: AppConfig.getFullUrl(json['coverImageUrl']),
       tags: tagsList,
       organizer: organizer,
       contact: eventContact,
       attendees: attendeesList,
-      attendeeCount: json['attendeeCount'] ?? (json['currentAttendees'] as num?)?.toInt() ?? 0,
+      attendeeCount: json['attendeeCount'] ??
+          (json['currentAttendees'] as num?)?.toInt() ??
+          0,
       highlights: highlightsList,
       isFree: isFree,
       price: json['price'] != null ? (json['price'] as num).toDouble() : null,
       location: eventLocation,
       isUserOrganizer: json['isUserOrganizer'] ?? false,
-      source: json['source'],
-      isExternal: json['isExternal'] ?? false,
-      popularityScore: json['popularityScore'] != null ? (json['popularityScore'] as num).toInt() : null,
-      hiddenScore: json['hiddenScore'] != null ? (json['hiddenScore'] as num).toInt() : null,
-      attendanceEstimate: json['attendanceEstimate'] != null ? (json['attendanceEstimate'] as num).toInt() : null,
     );
   }
 
@@ -428,11 +421,6 @@ class Event {
       'price': price,
       'location': location?.toJson(),
       'isUserOrganizer': isUserOrganizer,
-      'source': source,
-      'isExternal': isExternal,
-      'popularityScore': popularityScore,
-      'hiddenScore': hiddenScore,
-      'attendanceEstimate': attendanceEstimate,
     };
   }
 
@@ -467,11 +455,8 @@ class Event {
     double? price,
     EventLocation? location,
     bool? isUserOrganizer,
-    String? source,
-    bool? isExternal,
-    int? popularityScore,
-    int? hiddenScore,
-    int? attendanceEstimate,
+    String? locationName,
+    String? organizerName,
   }) {
     return Event(
       id: id ?? this.id,
@@ -504,11 +489,8 @@ class Event {
       price: price ?? this.price,
       location: location ?? this.location,
       isUserOrganizer: isUserOrganizer ?? this.isUserOrganizer,
-      source: source ?? this.source,
-      isExternal: isExternal ?? this.isExternal,
-      popularityScore: popularityScore ?? this.popularityScore,
-      hiddenScore: hiddenScore ?? this.hiddenScore,
-      attendanceEstimate: attendanceEstimate ?? this.attendanceEstimate,
+      locationName: locationName ?? this.locationName,
+      organizerName: organizerName ?? this.organizerName,
     );
   }
 }
@@ -534,27 +516,25 @@ class EventsProvider with ChangeNotifier {
     required this.eventService,
     required this.storage,
   }) {
-    // Loading registered/saved events on init can cause race condition with async storage
-    // They will be loaded lazily when needed, or explicitly after auth check completes
+    _loadRegisteredEvents();
+    _loadSavedEvents();
   }
 
   List<Event> get events => _events;
   List<Event> get registeredEvents {
-    if (_registeredEvents.isEmpty) {
-      _loadRegisteredEvents();
-    }
+    // Sort events by date in ascending order (soonest first)
     final sortedEvents = List<Event>.from(_registeredEvents);
     sortedEvents.sort((a, b) => a.startTime.compareTo(b.startTime));
     return sortedEvents;
   }
+
   List<Event> get savedEvents {
-    if (_savedEvents.isEmpty) {
-      _loadSavedEvents();
-    }
+    // Sort events by date in ascending order (soonest first)
     final sortedEvents = List<Event>.from(_savedEvents);
     sortedEvents.sort((a, b) => a.startTime.compareTo(b.startTime));
     return sortedEvents;
   }
+
   Event? get currentEvent => _currentEvent;
   bool get isLoading => _isLoading;
   bool get isLoadingMore => _isLoadingMore;
@@ -563,16 +543,14 @@ class EventsProvider with ChangeNotifier {
   bool get hasMore => _hasMore;
 
   Future<String?> _getToken() async {
-    final token = await storage.read(key: 'auth_token');
-    debugPrint('_getToken: ${token != null ? "Token found" : "Token is NULL"}');
-    return token;
+    return await storage.read(key: 'auth_token');
   }
 
   Future<void> _loadRegisteredEvents() async {
     try {
       final token = await _getToken();
       if (token == null) return;
-      
+
       final response = await eventService.getRegisteredEvents(
         token: token,
         page: 1,
@@ -860,9 +838,7 @@ class EventsProvider with ChangeNotifier {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        // Convert relative URL to absolute URL
-        final relativeUrl = data['data']['coverImageUrl'];
-        return AppConfig.getFullUrl(relativeUrl);
+        return data['data']['coverImageUrl'];
       } else {
         final data = jsonDecode(response.body);
         _error = data['message'] ?? 'Upload failed';
@@ -875,7 +851,8 @@ class EventsProvider with ChangeNotifier {
   }
 
   // Web-compatible version using bytes
-  Future<String?> uploadEventCoverWeb(Uint8List imageBytes, String fileName) async {
+  Future<String?> uploadEventCoverWeb(
+      Uint8List imageBytes, String fileName) async {
     try {
       final token = await _getToken();
       if (token == null) {
@@ -891,9 +868,7 @@ class EventsProvider with ChangeNotifier {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        // Convert relative URL to absolute URL
-        final relativeUrl = data['data']['coverImageUrl'];
-        return AppConfig.getFullUrl(relativeUrl);
+        return data['data']['coverImageUrl'];
       } else {
         final data = jsonDecode(response.body);
         _error = data['message'] ?? 'Upload failed';
@@ -1035,7 +1010,9 @@ class EventsProvider with ChangeNotifier {
         if (_currentEvent != null && _currentEvent!.id == eventId) {
           _currentEvent = _currentEvent!.copyWith(
             isUserRegistered: false,
-            currentAttendees: (_currentEvent!.currentAttendees - 1).clamp(0, double.infinity).toInt(),
+            currentAttendees: (_currentEvent!.currentAttendees - 1)
+                .clamp(0, double.infinity)
+                .toInt(),
           );
         }
         // Update event in list if present
@@ -1043,7 +1020,9 @@ class EventsProvider with ChangeNotifier {
         if (eventIndex != -1) {
           _events[eventIndex] = _events[eventIndex].copyWith(
             isUserRegistered: false,
-            currentAttendees: (_events[eventIndex].currentAttendees - 1).clamp(0, double.infinity).toInt(),
+            currentAttendees: (_events[eventIndex].currentAttendees - 1)
+                .clamp(0, double.infinity)
+                .toInt(),
           );
         }
         // Remove from registered events list
@@ -1313,15 +1292,12 @@ class EventsProvider with ChangeNotifier {
     try {
       final token = await _getToken();
       if (token == null) return;
-      
+
       final response = await eventService.getSavedEvents(
         token: token,
         page: 1,
       );
 
-      debugPrint('Saved events response status: ${response.statusCode}');
-      debugPrint('Saved events response body: ${response.body}');
-      
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final List<dynamic> eventsJson = data['data']['events'];
@@ -1330,127 +1306,6 @@ class EventsProvider with ChangeNotifier {
       }
     } catch (e) {
       debugPrint('Error loading saved events: $e');
-    }
-  }
-
-  // New methods for Hidden Gems and Underground feeds
-  Future<bool> fetchHiddenGems({
-    String? city,
-    String? category,
-    int? maxAttendees,
-    bool? isFree,
-    bool refresh = false,
-  }) async {
-    if (refresh) {
-      _currentPage = 1;
-      _hasMore = true;
-      _events = [];
-    }
-
-    if (_isLoading) return false;
-
-    _isLoading = _events.isEmpty;
-    _error = null;
-    notifyListeners();
-
-    try {
-      final token = await _getToken();
-      final response = await eventService.getHiddenGems(
-        city: city,
-        category: category,
-        maxAttendees: maxAttendees,
-        isFree: isFree,
-        page: _currentPage,
-        token: token,
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final List<dynamic> eventsJson = data['data']['events'];
-        final pagination = data['data']['pagination'];
-
-        final newEvents = eventsJson.map((e) => Event.fromJson(e)).toList();
-
-        if (refresh) {
-          _events = newEvents;
-        } else {
-          _events.addAll(newEvents);
-        }
-
-        _hasMore = _currentPage < pagination['pages'];
-        _currentPage++;
-
-        _isLoading = false;
-        notifyListeners();
-        return true;
-      } else {
-        _error = 'Failed to load hidden gems';
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-    } catch (e) {
-      _error = 'Network error: ${e.toString()}';
-      _isLoading = false;
-      notifyListeners();
-      return false;
-    }
-  }
-
-  Future<bool> fetchUnderground({
-    String? city,
-    bool refresh = false,
-  }) async {
-    if (refresh) {
-      _currentPage = 1;
-      _hasMore = true;
-      _events = [];
-    }
-
-    if (_isLoading) return false;
-
-    _isLoading = _events.isEmpty;
-    _error = null;
-    notifyListeners();
-
-    try {
-      final token = await _getToken();
-      final response = await eventService.getUnderground(
-        city: city,
-        page: _currentPage,
-        token: token,
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final List<dynamic> eventsJson = data['data']['events'];
-        final pagination = data['data']['pagination'];
-
-        final newEvents = eventsJson.map((e) => Event.fromJson(e)).toList();
-
-        if (refresh) {
-          _events = newEvents;
-        } else {
-          _events.addAll(newEvents);
-        }
-
-        _hasMore = _currentPage < pagination['pages'];
-        _currentPage++;
-
-        _isLoading = false;
-        notifyListeners();
-        return true;
-      } else {
-        _error = 'Failed to load underground events';
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-    } catch (e) {
-      _error = 'Network error: ${e.toString()}';
-      _isLoading = false;
-      notifyListeners();
-      return false;
     }
   }
 }

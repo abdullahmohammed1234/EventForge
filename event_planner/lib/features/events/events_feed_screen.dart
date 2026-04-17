@@ -9,6 +9,41 @@ import '../discover/widgets/discover_header.dart';
 import '../discover/widgets/category_item.dart';
 import '../../core/config/app_config.dart';
 
+String _selectedCity = "Surrey";
+
+final List<String> _cities = [
+  "Coquitlam",
+  "Surrey",
+  "Richmond",
+  "Vancouver",
+  "Burnaby",
+];
+
+String _getDaysRemaining(DateTime date) {
+  final diff = date.difference(DateTime.now()).inDays;
+
+  if (diff <= 0) return "Today";
+  if (diff == 1) return "Tomorrow";
+  return "in $diff days";
+}
+
+String _getCleanLocation(Event event) {
+  final street = event.address ?? '';
+  final place = event.location?.name ?? '';
+  final city = event.city ?? '';
+
+  // Priority: street > place > city
+  if (street.isNotEmpty && city.isNotEmpty) {
+    return "$street, $city";
+  }
+
+  if (place.isNotEmpty && place != city) {
+    return "$place, $city";
+  }
+
+  return city;
+}
+
 class EventsFeedScreen extends StatefulWidget {
   const EventsFeedScreen({super.key});
 
@@ -17,9 +52,7 @@ class EventsFeedScreen extends StatefulWidget {
 }
 
 class _EventsFeedScreenState extends State<EventsFeedScreen> {
-  final ScrollController _scrollController = ScrollController();
-
-  // Track which view is selected: 0 = Discover, 1 = Your Groups, 2 = Hidden Gems, 3 = Underground
+  // Track which view is selected: 0 = Discover Events, 1 = Your Groups
   int _selectedView = 0;
 
   //track which category is selected
@@ -35,6 +68,14 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
     CategoryData(label: 'Social', icon: Icons.people),
   ];
 
+  List<Event> _getFilteredHotEvents(List<Event> events) {
+    if (_selectedCategoryIndex == 0) return events;
+
+    final selected = _categories[_selectedCategoryIndex].label.toLowerCase();
+
+    return events.where((e) => e.category == selected).toList();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -43,22 +84,10 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
       context.read<EventsProvider>().clearSearchState();
       context.read<EventsProvider>().fetchEvents(refresh: true);
     });
-    _scrollController.addListener(_scrollListener);
-  }
-
-  void _scrollListener() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      if (context.read<EventsProvider>().hasMore &&
-          !context.read<EventsProvider>().isLoadingMore) {
-        context.read<EventsProvider>().loadMoreEvents();
-      }
-    }
   }
 
   @override
   void dispose() {
-    _scrollController.dispose();
     super.dispose();
   }
 
@@ -77,43 +106,29 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
               setState(() {
                 _selectedView = 0;
               });
-              context.read<EventsProvider>().fetchEvents(refresh: true);
             },
             onYourGroupsTap: () {
               setState(() {
                 _selectedView = 1;
               });
             },
-            onHiddenGemsTap: () {
-              setState(() {
-                _selectedView = 2;
-              });
-              context.read<EventsProvider>().fetchHiddenGems(refresh: true);
-            },
-            onUndergroundTap: () {
-              setState(() {
-                _selectedView = 3;
-              });
-              context.read<EventsProvider>().fetchUnderground(refresh: true);
-            },
           ),
           const SizedBox(height: 12),
-          if (_selectedView == 0) _buildCategoryBar(),
-          if (_selectedView == 2 || _selectedView == 3) _buildNewFiltersBar(),
+          //if (_selectedView == 0) _buildCategoryBar(),
 
           // Content area - switch between views
           Expanded(
             child: _selectedView == 0
                 ? _buildDiscoverEventsTab(eventsProvider)
-                : _selectedView == 2
-                    ? _buildHiddenGemsTab(eventsProvider)
-                    : _selectedView == 3
-                        ? _buildUndergroundTab(eventsProvider)
-                        : _buildYourGroupsTab(),
+                : _buildYourGroupsTab(),
           ),
         ],
-),
+      ),
     );
+  }
+
+  Widget _buildYourGroupsTab() {
+    return const YourGroupsScreen();
   }
 
   Widget _buildCategoryBar() {
@@ -124,556 +139,248 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
         setState(() {
           _selectedCategoryIndex = index;
         });
-
-        final label = _categories[index].label;
-
-        final category = label == 'All' ? null : label.toLowerCase();
-
-        context.read<EventsProvider>().fetchEvents(
-              refresh: true,
-              category: category,
-            );
       },
     );
   }
 
-  Widget _buildNewFiltersBar() {
-    final filters = [
-      CategoryData(label: 'Small Events (<20)', icon: Icons.groups),
-      CategoryData(label: 'Community', icon: Icons.people_outline),
-      CategoryData(label: 'Free', icon: Icons.money_off),
-    ];
-    final labels = filters.map((f) => f.label).toList();
+  Widget _buildUpcomingEvent(List<Event> events) {
+    events.sort((a, b) => a.startTime.compareTo(b.startTime));
+    final event = events.first;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: SizedBox(
-        height: 44,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          itemCount: filters.length,
-          separatorBuilder: (context, index) => const SizedBox(width: 8),
-          itemBuilder: (context, index) {
-            final filter = filters[index];
-            return CategoryItem(
-              label: filter.label,
-              icon: filter.icon,
-              isSelected: false,
-              onTap: () => _applyFilter(labels[index]),
-            );
-          },
+      child: GestureDetector(
+        onTap: () => context.push('/events/${event.id}'),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFFFE76B8)),
+            color: Colors.white,
+          ),
+          child: Row(
+            children: [
+              /// IMAGE
+              Expanded(
+                flex: 4,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.network(
+                    AppConfig.getFullUrl(event.coverImageUrl),
+                    height: 120,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      height: 120,
+                      color: Colors.grey[300],
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              /// TEXT CONTENT
+              Expanded(
+                flex: 6,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    /// PINK
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFE4F0),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        _getDaysRemaining(event.startTime),
+                        style: const TextStyle(
+                          color: Color(0xFFFE76B8),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    /// TITLE
+                    Text(
+                      event.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    /// DATE
+                    Text(
+                      DateFormat('EEE, MMM d • h:mm a').format(event.startTime),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+
+                    const SizedBox(height: 4),
+
+                    /// LOCATION
+                    Text(
+                      _getCleanLocation(event),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              /// ➜ BUTTON
+              Transform.rotate(
+                angle: -0.785, // 45 degrees
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFE76B8),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.arrow_forward,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
-  }
-
-  void _applyFilter(String filter) async {
-    final provider = context.read<EventsProvider>();
-    if (_selectedView == 2) {
-      if (filter.contains('Small')) {
-        await provider.fetchHiddenGems(refresh: true, maxAttendees: 20);
-      } else if (filter.contains('Free')) {
-        await provider.fetchHiddenGems(refresh: true, isFree: true);
-      }
-    } else if (_selectedView == 3) {
-      await provider.fetchUnderground(refresh: true);
-    }
   }
 
   Widget _buildDiscoverEventsTab(EventsProvider eventsProvider) {
+    final savedEvents =
+        eventsProvider.events.where((e) => e.isUserSaved).toList();
+
+    final user = context.watch<AuthProvider>().user;
+
     return Stack(
       children: [
         RefreshIndicator(
           onRefresh: () async {
-            // Clear search state on refresh to get all events
             context.read<EventsProvider>().clearSearchState();
             await context.read<EventsProvider>().fetchEvents(refresh: true);
           },
-          child: eventsProvider.isLoading && eventsProvider.events.isEmpty
-              ? const Center(child: CircularProgressIndicator())
-              : eventsProvider.events.isEmpty
-                  ? ListView(
-                      children: [
-                        Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(32.0),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.event_busy,
-                                  size: 80,
-                                  color: Colors.grey[400],
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'No events found',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Be the first to create an event!',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[500],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.all(16),
-                      itemCount: eventsProvider.events.length +
-                          (eventsProvider.isLoadingMore ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index >= eventsProvider.events.length) {
-                          return const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(16),
-                              child: CircularProgressIndicator(),
-                            ),
-                          );
-                        }
-
-                        final event = eventsProvider.events[index];
-                        return EventCard(event: event);
-                      },
-                    ),
-        ),
-        // Floating Action Button
-        Positioned(
-          bottom: 16,
-          right: 16,
-          child: FloatingActionButton.extended(
-            onPressed: () {
-              context.go('/events/create');
-            },
-            label: const Text('Create Event'),
-            icon: const Icon(Icons.add),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHiddenGemsTab(EventsProvider eventsProvider) {
-    return Stack(
-      children: [
-        RefreshIndicator(
-          onRefresh: () async {
-            await context.read<EventsProvider>().fetchHiddenGems(refresh: true);
-          },
-          child: eventsProvider.isLoading && eventsProvider.events.isEmpty
-              ? const Center(child: CircularProgressIndicator())
-              : eventsProvider.events.isEmpty
-                  ? ListView(
-                      children: [
-                        Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(32.0),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.diamond_outlined, size: 80, color: Colors.amber[400]),
-                                const SizedBox(height: 16),
-                                Text('No hidden gems found', style: TextStyle(fontSize: 18, color: Colors.grey[600])),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.all(16),
-                      itemCount: eventsProvider.events.length + (eventsProvider.isLoadingMore ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index >= eventsProvider.events.length) {
-                          return const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()));
-                        }
-                        return EventCard(event: eventsProvider.events[index]);
-                      },
-                    ),
-        ),
-        Positioned(
-          bottom: 16,
-          right: 16,
-          child: FloatingActionButton.extended(
-            onPressed: () => context.go('/events/create'),
-            label: const Text('Create Event'),
-            icon: const Icon(Icons.add),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildUndergroundTab(EventsProvider eventsProvider) {
-    return Stack(
-      children: [
-        RefreshIndicator(
-          onRefresh: () async {
-            await context.read<EventsProvider>().fetchUnderground(refresh: true);
-          },
-          child: eventsProvider.isLoading && eventsProvider.events.isEmpty
-              ? const Center(child: CircularProgressIndicator())
-              : eventsProvider.events.isEmpty
-                  ? ListView(
-                      children: [
-                        Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(32.0),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.people_outline, size: 80, color: Colors.purple[300]),
-                                const SizedBox(height: 16),
-                                Text('No underground events found', style: TextStyle(fontSize: 18, color: Colors.grey[600])),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.all(16),
-                      itemCount: eventsProvider.events.length + (eventsProvider.isLoadingMore ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index >= eventsProvider.events.length) {
-                          return const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()));
-                        }
-                        return EventCard(event: eventsProvider.events[index]);
-                      },
-                    ),
-        ),
-        Positioned(
-          bottom: 16,
-          right: 16,
-          child: FloatingActionButton.extended(
-            onPressed: () => context.go('/events/create'),
-            label: const Text('Create Event'),
-            icon: const Icon(Icons.add),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildYourGroupsTab() {
-    return const YourGroupsScreen();
-  }
-}
-
-class EventCard extends StatelessWidget {
-  final Event event;
-
-  const EventCard({
-    super.key,
-    required this.event,
-  });
-
-  String _formatDate(DateTime date) {
-    return DateFormat('EEE, MMM d, yyyy • h:mm a').format(date);
-  }
-
-  Color _getCategoryColor(String category) {
-    final colors = {
-      'music': Colors.purple,
-      'sports': Colors.green,
-      'arts': Colors.orange,
-      'food': Colors.red,
-      'technology': Colors.blue,
-      'business': Colors.teal,
-      'social': Colors.pink,
-      'outdoor': Colors.lime,
-      'other': Colors.grey,
-    };
-    return colors[category] ?? Colors.grey;
-  }
-
-  Widget _buildCategoryBanner() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: _getCategoryColor(event.category).withOpacity(0.1),
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(12),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            _getCategoryIcon(event.category),
-            size: 16,
-            color: _getCategoryColor(event.category),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            event.category.toUpperCase(),
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: _getCategoryColor(event.category),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _toggleBookmark(BuildContext context) async {
-    final authProvider = context.read<AuthProvider>();
-    final eventsProvider = context.read<EventsProvider>();
-
-    if (!authProvider.isAuthenticated) {
-      // Show login prompt
-      if (context.mounted) {
-        showModalBottomSheet(
-          context: context,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          builder: (context) => Padding(
-            padding: const EdgeInsets.all(24),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 100),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[400],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                const Icon(Icons.login, size: 48, color: Colors.blue),
-                const SizedBox(height: 16),
-                const Text(
-                  'Sign in to save events',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'You need to be signed in to save events',
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      context.push('/login');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    child: const Text('Sign In'),
-                  ),
-                ),
                 const SizedBox(height: 12),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
+
+                /// 👋 HEADER
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    "Hey, ${user?.displayName ?? 'there'}!",
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
+
+                const SizedBox(height: 16),
+
+                /// UPCOMING (Saved Events)
+                _buildSectionTitle("Upcoming Event"),
+                const SizedBox(height: 12),
+
+                savedEvents.isEmpty
+                    ? _buildEmptyUpcoming()
+                    : _buildUpcomingEvent(savedEvents),
+
+                const SizedBox(height: 24),
+
+                /// DISCOVER NEAR YOU
+                _buildLocationHeader(),
+
+                const SizedBox(height: 12),
+
+                _buildHorizontalEvents(
+                  eventsProvider.events.where((e) {
+                    final eventCity = (e.city ?? '').toLowerCase();
+                    final selected = _selectedCity.toLowerCase();
+
+                    return eventCity.contains(selected);
+                  }).toList(),
+                ),
+
+                const SizedBox(height: 24),
+
+                /// POPULAR EVENTS
+                _buildHotEventsHeader(),
+                const SizedBox(height: 12),
+                _buildCategoryBar(),
+                const SizedBox(height: 16),
+                _buildHorizontalEvents(
+                    _getFilteredHotEvents(eventsProvider.events)),
               ],
             ),
           ),
-        );
-      }
-      return;
-    }
+        ),
 
-    // Toggle save/unsave
-    if (event.isUserSaved) {
-      await eventsProvider.unsaveEvent(event.id);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Event removed from saved'),
-            backgroundColor: Colors.orange,
+        /// FAB
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: FloatingActionButton.extended(
+            onPressed: () => context.go('/events/create'),
+            label: const Text('Create Event'),
+            icon: const Icon(Icons.add),
           ),
-        );
-      }
-    } else {
-      await eventsProvider.saveEvent(event.id);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Event saved!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    }
+        ),
+      ],
+    );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.push('/events/${event.id}'),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 18),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              blurRadius: 10,
-              color: Colors.black.withOpacity(0.05),
-              offset: const Offset(0, 4),
-            )
-          ],
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      ),
+    );
+  }
+
+  Widget _buildEmptyUpcoming() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.pinkAccent),
+        ),
+        child: Row(
           children: [
-            // IMAGE
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(18),
-                  ),
-                  child: event.coverImageUrl != null
-                      ? Image.network(
-                          event.coverImageUrl!,
-                          height: 180,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              height: 180,
-                              color: Colors.grey[300],
-                              child: const Center(
-                                child: Icon(Icons.image_not_supported, size: 40),
-                              ),
-                            );
-                          },
-                        )
-                      : Container(
-                          height: 180,
-                          color: Colors.grey[300],
-                        ),
-                ),
-
-                // bookmark / like
-                Positioned(
-                  right: 10,
-                  top: 10,
-                  child: GestureDetector(
-                    onTap: () => _toggleBookmark(context),
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        event.isUserSaved
-                            ? Icons.bookmark
-                            : Icons.bookmark_border,
-                        color: const Color(0xFFFE76B8),
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            // CONTENT
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // title
-                  Text(
-                    event.title,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  // location + date
-                  Text(
-                    "${event.city} • ${_formatDate(event.startTime)}",
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  // creator
-                  if (event.creatorName != null)
-                    Text(
-                      "By ${event.creatorName}",
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[500],
-                      ),
-                    ),
-
-                  const SizedBox(height: 10),
-
-                  // bottom row (avatars + going)
-                  Row(
-                    children: [
-                      // avatar image
-                      Row(
-                        children: List.generate(
-                          3,
-                          (index) => Container(
-                            margin: const EdgeInsets.only(right: 4),
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.grey[300],
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(width: 6),
-
-                      Text(
-                        "+ going",
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-
-                      const Spacer(),
-
-                      Icon(
-                        Icons.ios_share,
-                        size: 20,
-                        color: Colors.grey[600],
-                      ),
-                    ],
-                  ),
-                ],
+            const Icon(Icons.search, color: Colors.pink),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                "No saved events yet.\nFind more events!",
+                style: TextStyle(fontSize: 14),
               ),
             ),
           ],
@@ -682,18 +389,395 @@ class EventCard extends StatelessWidget {
     );
   }
 
-  IconData _getCategoryIcon(String category) {
-    final icons = {
-      'music': Icons.music_note,
-      'sports': Icons.sports_baseball,
-      'arts': Icons.palette,
-      'food': Icons.restaurant,
-      'technology': Icons.computer,
-      'business': Icons.business,
-      'social': Icons.groups,
-      'outdoor': Icons.park,
-      'other': Icons.event,
-    };
-    return icons[category] ?? Icons.event;
+  Widget _buildLocationHeader() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          /// SECTION TITLE (NEW)
+          const Text(
+            "Discover events near you",
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          /// CITY DROPDOWN ROW
+          Row(
+            children: [
+              DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _selectedCity,
+                  icon: const Icon(Icons.keyboard_arrow_down),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                  ),
+                  items: _cities.map((city) {
+                    return DropdownMenuItem(
+                      value: city,
+                      child: Row(
+                        children: [
+                          const Icon(Icons.location_on, size: 18),
+                          const SizedBox(width: 6),
+                          Text(city),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        _selectedCity = value;
+                      });
+                    }
+                  },
+                ),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: () {},
+                child: Text(
+                  "View All >",
+                  style: TextStyle(color: Colors.grey[500]),
+                ),
+              )
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHotEventsHeader() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          const Text(
+            "Popular Events",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          ),
+          const Spacer(),
+          TextButton(
+            onPressed: () {},
+            child: const Text("View All >"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHorizontalEvents(List<Event> events) {
+    if (events.isEmpty) {
+      return const SizedBox(
+        height: 120,
+        child: Center(child: Text("No events")),
+      );
+    }
+
+    return SizedBox(
+      height: 260,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: events.length,
+        itemBuilder: (context, index) {
+          final event = events[index];
+
+          return GestureDetector(
+            onTap: () => context.push('/events/${event.id}'),
+            child: Container(
+              width: 160,
+              margin: const EdgeInsets.only(right: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  /// IMAGE (separate square box)
+                  Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.network(
+                          AppConfig.getFullUrl(event.coverImageUrl),
+                          height: 140,
+                          width: 160,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            height: 140,
+                            width: 160,
+                            color: Colors.grey[300],
+                          ),
+                        ),
+                      ),
+
+                      /// HEART BUTTON
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: GestureDetector(
+                          onTap: () async {
+                            final provider = context.read<EventsProvider>();
+
+                            bool success;
+
+                            if (event.isUserSaved) {
+                              success = await provider.unsaveEvent(event.id);
+                            } else {
+                              success = await provider.saveEvent(event.id);
+                            }
+
+                            if (!success) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text("Something went wrong")),
+                              );
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              event.isUserSaved
+                                  ? Icons.bookmark
+                                  : Icons.bookmark_border,
+                              size: 18,
+                              color: const Color(0xFFFE76B8),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  /// CONTENT (outside image)
+                  Text(
+                    event.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+
+                  /// LOCATION + TIME
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on, size: 12),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          "${_getCleanLocation(event)} • ${DateFormat('h:mm a').format(event.startTime)}",
+                          style:
+                              TextStyle(fontSize: 12, color: Colors.grey[600]),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 2),
+
+                  /// ORGANIZER
+                  Row(
+                    children: [
+                      const Icon(Icons.person, size: 12),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          "By ${event.organizer?.name ?? 'Unknown'}",
+                          style:
+                              TextStyle(fontSize: 11, color: Colors.grey[500]),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class EventCard extends StatelessWidget {
+  final Event event;
+  final bool isHorizontal;
+
+  const EventCard({
+    super.key,
+    required this.event,
+    this.isHorizontal = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return isHorizontal ? _buildHorizontal(context) : _buildVertical(context);
+  }
+
+  /// HORIZONTAL (your new UI)
+  Widget _buildHorizontal(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.push('/events/${event.id}'),
+      child: Container(
+        width: 200,
+        margin: const EdgeInsets.only(right: 16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              blurRadius: 8,
+              color: Colors.black.withOpacity(0.05),
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                  child: (event.coverImageUrl != null &&
+                          event.coverImageUrl!.isNotEmpty)
+                      ? Image.network(
+                          AppConfig.getFullUrl(event.coverImageUrl),
+                          height: isHorizontal ? 130 : 180,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            height: isHorizontal ? 130 : 180,
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.image),
+                          ),
+                        )
+                      : Container(
+                          height: 130,
+                          color: Colors.grey[300],
+                        ),
+                ),
+
+                /// DATE BADGE
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.pinkAccent,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      DateFormat('MMM d').format(event.startTime),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    event.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on,
+                          size: 14, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          "${event.locationName ?? event.city} • ${DateFormat('h:mm a').format(event.startTime)}",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.person, size: 14, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          "By ${event.organizerName}",
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[500],
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// VERTICAL (your old UI)
+  Widget _buildVertical(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.push('/events/${event.id}'),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 18),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          color: Colors.white,
+        ),
+        child: Column(
+          children: [
+            (event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty)
+                ? Image.network(
+                    AppConfig.getFullUrl(event.coverImageUrl),
+                    errorBuilder: (_, __, ___) => Container(
+                      height: 130,
+                      color: Colors.grey[300],
+                      child: const Icon(Icons.image),
+                    ),
+                  )
+                : Container(height: 180, color: Colors.grey[300]),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Text(event.title),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

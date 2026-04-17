@@ -75,12 +75,7 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/SplashScreen.gif
-    - assets/image_42.png
-    - assets/image_49.png
-    - assets/image_50.png
-    - assets/playstore.png
-    - assets/appstore.png
+    - assets/
     - .env
 
 flutter_launcher_icons:
