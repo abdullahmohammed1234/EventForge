@@ -8,6 +8,8 @@ EventForge is a mobile application for discovering, creating, and managing local
 
 - **Authentication**: Register and login with email/password
 - **Discover Events**: Browse events by category and city
+- **Search**: Search events by title, description, or location
+- **Maps Integration**: View events on map, get directions to events using OpenRouteService
 - **Create Events**: Create events with cover images, categories, locations, and dates
 - **Manage Events**: View, save, and register for events
 - **User Profiles**: Manage profile with avatar and personal information
@@ -17,16 +19,18 @@ EventForge is a mobile application for discovering, creating, and managing local
 
 ### Backend (Node.js + Express)
 
-- **Stack**: Node.js, Express, MongoDB Atlas, Mongoose, JWT
+- **Stack**: Node.js, Express, MongoDB Atlas, Mongoose, JWT, OpenRouteService
 - **Structure**: MVC pattern with controllers, routes, models, middleware
 - **Security**: bcrypt password hashing, JWT auth, helmet, cors, express-validator, morgan
 - **Storage**: Local file uploads + Cloudinary for cloud image storage
+- **Maps**: OpenRouteService for geocoding and directions
 
 ### Frontend (Flutter)
 
 - **State Management**: Provider
 - **Storage**: flutter_secure_storage for JWT tokens
 - **HTTP Client**: http package
+- **Maps**: Integration with OpenRouteService API
 
 ## 🚀 Getting Started
 
@@ -62,6 +66,9 @@ FRONTEND_URL=http://localhost:3001
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
+
+# OpenRouteService Configuration (for maps and directions)
+OPENROUTESERVICE_API_KEY=your_openrouteservice_api_key
 ```
 
 ### 2. Install Dependencies
@@ -106,6 +113,8 @@ The API will be available at `http://localhost:3000`
 | POST | `/api/events/:id/unregister` | Unregister from event | Yes |
 | POST | `/api/events/:id/save` | Save event | Yes |
 | POST | `/api/events/:id/unsave` | Unsave event | Yes |
+| POST | `/api/maps/geocode` | Geocode an address | No |
+| GET | `/api/maps/directions/:eventId` | Get directions to an event | No |
 
 ### Query Parameters for GET /api/events
 
@@ -150,6 +159,22 @@ LOCAL_IP=192.168.x.x  # Your computer's local IP address
 cd event_planner
 flutter run
 ```
+
+---
+
+## 🗺️ OpenRouteService Setup (Optional)
+
+For maps and directions functionality:
+
+1. Create a free OpenRouteService account at https://openrouteservice.org
+2. Get your API key from the dashboard
+3. Add credentials to `backend/.env`
+
+```env
+OPENROUTESERVICE_API_KEY=your_api_key
+```
+
+If OpenRouteService is not configured, geocoding and directions features will not work.
 
 ---
 
@@ -218,7 +243,7 @@ backend/
 event_planner/
 ├── lib/
 │   ├── core/
-│   │   ├── api/           # API services (auth, events)
+│   │   ├── api/           # API services (auth, events, maps)
 │   │   ├── config/        # App configuration
 │   │   └── utils/         # Helper utilities
 │   ├── features/
@@ -227,6 +252,7 @@ event_planner/
 │   │   ├── discover/      # Discover screen with categories
 │   │   ├── profile/       # Profile screen
 │   │   ├── search/        # Search functionality
+│   │   ├── maps/          # Map view and directions
 │   │   ├── safety/        # Safety center
 │   │   └── notifications/ # Notifications
 │   └── main.dart
@@ -253,6 +279,8 @@ event_planner/
 - External API integration
 - Ranking system
 - Admin dashboard
+- Event check-ins
+- Location-based notifications
 
 ---
 
