@@ -148,9 +148,11 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                                     child: CircleAvatar(
                                       radius: 60,
                                       backgroundColor: Colors.white,
-                                      backgroundImage: authProvider.profileImage != null
-                                          ? MemoryImage(authProvider.profileImage!)
-                                          : null,
+                                      backgroundImage:
+                                          authProvider.profileImage != null
+                                              ? MemoryImage(
+                                                  authProvider.profileImage!)
+                                              : null,
                                       child: authProvider.profileImage == null
                                           ? const Icon(Icons.person, size: 44)
                                           : null,
@@ -313,15 +315,13 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                   ),
                 ),
                 Expanded(
-                  child: _selectedTab == 0
-                      ? _RegisteredTab()
-                      : _SavedTab(),
+                  child: _selectedTab == 0 ? _RegisteredTab() : _SavedTab(),
                 ),
               ],
             ),
           ),
         ],
-),
+      ),
     );
   }
 }
@@ -726,27 +726,28 @@ class _RegisteredEventCard extends StatelessWidget {
             child: SizedBox(
               width: 96,
               height: 96,
-              child: event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty
-                  ? Image.network(
-                      AppConfig.getFullUrl(event.coverImageUrl),
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        color: Colors.grey.shade300,
-                        child: const Icon(
-                          Icons.image_outlined,
-                          color: Colors.grey,
-                          size: 32,
+              child:
+                  event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty
+                      ? Image.network(
+                          event.coverImageUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: Colors.grey.shade300,
+                            child: const Icon(
+                              Icons.image_outlined,
+                              color: Colors.grey,
+                              size: 32,
+                            ),
+                          ),
+                        )
+                      : Container(
+                          color: Colors.grey.shade300,
+                          child: const Icon(
+                            Icons.image_outlined,
+                            color: Colors.grey,
+                            size: 32,
+                          ),
                         ),
-                      ),
-                    )
-                  : Container(
-                      color: Colors.grey.shade300,
-child: const Icon(
-                          Icons.image_outlined,
-                          color: Colors.grey,
-                          size: 32,
-                        ),
-            ),
             ),
           ),
           const SizedBox(width: 16),
