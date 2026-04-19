@@ -14,7 +14,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  Uint8List? _selectedImage;
   final ImagePicker _picker = ImagePicker();
 
   int _registeredEventsCount = 0;
@@ -51,9 +50,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
       final bytes = await image.readAsBytes();
-      setState(() {
-        _selectedImage = bytes;
-      });
+      // Update shared profile image in AuthProvider
+      context.read<AuthProvider>().setProfileImage(bytes);
     }
   }
 
@@ -100,6 +98,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
     final user = authProvider.user;
+    final profileImage = authProvider.profileImage;
 
     final displayName = user?.displayName?.trim().isNotEmpty == true
         ? user!.displayName!
@@ -161,10 +160,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             child: CircleAvatar(
                               radius: 52,
                               backgroundColor: const Color(0xFFB7C6E5),
-                              backgroundImage: _selectedImage != null
-                                  ? MemoryImage(_selectedImage!)
+                              backgroundImage: profileImage != null
+                                  ? MemoryImage(profileImage!)
                                   : null,
-                              child: _selectedImage == null
+                              child: profileImage == null
                                   ? const Icon(
                                       Icons.person,
                                       size: 56,

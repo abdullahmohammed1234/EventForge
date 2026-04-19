@@ -175,6 +175,36 @@ const eventSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    source: {
+      type: String,
+      enum: ['eventforge', 'discord', 'telegram'],
+      default: 'eventforge',
+    },
+    isExternal: {
+      type: Boolean,
+      default: false,
+    },
+    externalId: {
+      type: String,
+      trim: true,
+    },
+    popularityScore: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: 50,
+    },
+    hiddenScore: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: 0,
+    },
+    attendanceEstimate: {
+      type: Number,
+      min: 0,
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -195,6 +225,9 @@ eventSchema.index({ location: '2dsphere' });
 eventSchema.index({ city: 1, startTime: 1 });
 eventSchema.index({ category: 1, startTime: 1 });
 eventSchema.index({ createdBy: 1, createdAt: -1 });
+eventSchema.index({ source: 1, startTime: 1 });
+eventSchema.index({ hiddenScore: -1, startTime: 1 });
+eventSchema.index({ isExternal: 1, source: 1 });
 
 // Virtual for duration
 eventSchema.virtual('duration').get(function () {

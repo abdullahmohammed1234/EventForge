@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -8,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 import 'dart:convert';
+import '../../core/api/maps_service.dart';
 import 'events_provider.dart';
 import '../safety/safety_center_screen.dart';
 
@@ -111,11 +113,25 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
     
     if (event == null) return;
     
-    final String address = Uri.encodeComponent('${event.address ?? event.city}, ${event.city}');
-    final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$address');
+    final String address = event.address ?? '';
+    final String city = event.city ?? '';
     
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
+    if (address.isEmpty && city.isEmpty) {
+      return;
+    }
+    
+    final String searchQuery = address.isNotEmpty 
+        ? (city.isNotEmpty ? '$address, $city' : address)
+        : city;
+    
+    final result = await MapsService.getOrsSearchUrl(address: address, city: city);
+    if (result != null && result['url'] != null) {
+      final url = Uri.parse(result['url'] as String);
+      try {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } catch (e) {
+        debugPrint('Error opening map: $e');
+      }
     }
   }
 
@@ -139,10 +155,12 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
       }
     }
     
-    final url = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$query&travelmode=driving');
+    final url = Uri.parse('https://www.openstreetmap.org/directions?from=&to=$query&route=car');
     
-    if (await canLaunchUrl(url)) {
+    try {
       await launchUrl(url, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('Error getting driving directions: $e');
     }
   }
 
@@ -162,14 +180,16 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
       if (locationString.isNotEmpty) {
         query = Uri.encodeComponent(locationString);
       } else {
-        return; // No location available
+return; // No location available
       }
     }
     
-    final url = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$query&travelmode=transit');
+    final url = Uri.parse('https://www.openstreetmap.org/directions?from=&to=$query&route=pedestrian');
     
-    if (await canLaunchUrl(url)) {
+    try {
       await launchUrl(url, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('Error getting public transit: $e');
     }
   }
 

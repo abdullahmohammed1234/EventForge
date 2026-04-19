@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../auth/auth_provider.dart';
 import 'events_provider.dart';
+import '../../core/config/app_config.dart';
 
 const accent = Color(0xFFF062AE);
 
@@ -18,11 +19,9 @@ class MyEventsScreen extends StatefulWidget {
   State<MyEventsScreen> createState() => _MyEventsScreenState();
 }
 
-class _MyEventsScreenState extends State<MyEventsScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _MyEventsScreenState extends State<MyEventsScreen> {
+  int _selectedTab = 0;
 
-  Uint8List? _selectedImage;
   final ImagePicker _picker = ImagePicker();
 
   Future<void> _pickImage() async {
@@ -30,17 +29,14 @@ class _MyEventsScreenState extends State<MyEventsScreen>
 
     if (image != null) {
       final bytes = await image.readAsBytes();
-      setState(() {
-        _selectedImage = bytes;
-      });
+      // Update shared profile image in AuthProvider
+      context.read<AuthProvider>().setProfileImage(bytes);
     }
   }
 
   @override
   void initState() {
     super.initState();
-
-    _tabController = TabController(length: 2, vsync: this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<EventsProvider>();
@@ -53,12 +49,6 @@ class _MyEventsScreenState extends State<MyEventsScreen>
         provider.fetchSavedEvents(refresh: true);
       }
     });
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   /* Event preferences */
@@ -158,10 +148,12 @@ class _MyEventsScreenState extends State<MyEventsScreen>
                                     child: CircleAvatar(
                                       radius: 60,
                                       backgroundColor: Colors.white,
-                                      backgroundImage: _selectedImage != null
-                                          ? MemoryImage(_selectedImage!)
-                                          : null,
-                                      child: _selectedImage == null
+                                      backgroundImage:
+                                          authProvider.profileImage != null
+                                              ? MemoryImage(
+                                                  authProvider.profileImage!)
+                                              : null,
+                                      child: authProvider.profileImage == null
                                           ? const Icon(Icons.person, size: 44)
                                           : null,
                                     ),
@@ -254,38 +246,76 @@ class _MyEventsScreenState extends State<MyEventsScreen>
                 Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                  child: TabBar(
-                    controller: _tabController,
-                    indicatorColor: const Color(0xFFF062AE),
-                    indicatorWeight: 3,
-                    indicatorSize: TabBarIndicatorSize.label,
-                    dividerColor: Colors.grey.shade500,
-                    labelColor: const Color(0xFFF062AE),
-                    unselectedLabelColor: Colors.grey.shade700,
-                    labelStyle: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    unselectedLabelStyle: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w400,
-                    ),
-                    overlayColor: WidgetStateProperty.all(Colors.transparent),
-                    splashFactory: NoSplash.splashFactory,
-                    tabs: const [
-                      Tab(text: 'Events'),
-                      Tab(text: 'Saved'),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _selectedTab = 0),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: _selectedTab == 0
+                                      ? const Color(0xFFF062AE)
+                                      : Colors.transparent,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                            child: Text(
+                              'My events',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: _selectedTab == 0
+                                    ? FontWeight.w500
+                                    : FontWeight.w400,
+                                color: _selectedTab == 0
+                                    ? const Color(0xFFF062AE)
+                                    : Colors.grey.shade700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _selectedTab = 1),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: _selectedTab == 1
+                                      ? const Color(0xFFF062AE)
+                                      : Colors.transparent,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                            child: Text(
+                              'Saved events',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: _selectedTab == 1
+                                    ? FontWeight.w500
+                                    : FontWeight.w400,
+                                color: _selectedTab == 1
+                                    ? const Color(0xFFF062AE)
+                                    : Colors.grey.shade700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _RegisteredTab(),
-                      _SavedTab(),
-                    ],
-                  ),
+                  child: _selectedTab == 0 ? _RegisteredTab() : _SavedTab(),
                 ),
               ],
             ),
@@ -301,62 +331,60 @@ class _RegisteredTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final eventsProvider = context.watch<EventsProvider>();
 
-    return RefreshIndicator(
-      onRefresh: () async {
-        await eventsProvider.fetchRegisteredEvents(refresh: true);
+    if (eventsProvider.isLoading && eventsProvider.registeredEvents.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (eventsProvider.registeredEvents.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.event_available,
+              size: 72,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No registered events',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Browse events and register to see them here!',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[500],
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => context.go('/events'),
+              child: const Text('Discover Events'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const ClampingScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      itemCount: eventsProvider.registeredEvents.length,
+      itemBuilder: (context, index) {
+        final event = eventsProvider.registeredEvents[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: _RegisteredEventCard(event: event),
+        );
       },
-      child: eventsProvider.isLoading && eventsProvider.registeredEvents.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : eventsProvider.registeredEvents.isEmpty
-              ? ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                  children: [
-                    Column(
-                      children: [
-                        Icon(
-                          Icons.event_available,
-                          size: 72,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No registered events',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Browse events and register to see them here!',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: () => context.go('/events'),
-                          child: const Text('Discover Events'),
-                        ),
-                      ],
-                    ),
-                  ],
-                )
-              : ListView.separated(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
-                  itemCount: eventsProvider.registeredEvents.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 22),
-                  itemBuilder: (context, index) {
-                    final event = eventsProvider.registeredEvents[index];
-                    return _RegisteredEventCard(event: event);
-                  },
-                ),
     );
   }
 }
@@ -366,62 +394,60 @@ class _SavedTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final eventsProvider = context.watch<EventsProvider>();
 
-    return RefreshIndicator(
-      onRefresh: () async {
-        await eventsProvider.fetchSavedEvents(refresh: true);
+    if (eventsProvider.isLoading && eventsProvider.savedEvents.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (eventsProvider.savedEvents.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.bookmark_border,
+              size: 72,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No saved events',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Save events to see them here!',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[500],
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => context.go('/events'),
+              child: const Text('Discover Events'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const ClampingScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      itemCount: eventsProvider.savedEvents.length,
+      itemBuilder: (context, index) {
+        final event = eventsProvider.savedEvents[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: _SavedEventCard(event: event),
+        );
       },
-      child: eventsProvider.isLoading && eventsProvider.savedEvents.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : eventsProvider.savedEvents.isEmpty
-              ? ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                  children: [
-                    Column(
-                      children: [
-                        Icon(
-                          Icons.bookmark_border,
-                          size: 72,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No saved events',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Save events to see them here!',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: () => context.go('/events'),
-                          child: const Text('Discover Events'),
-                        ),
-                      ],
-                    ),
-                  ],
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: eventsProvider.savedEvents.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: 16),
-                  itemBuilder: (context, index) {
-                    final event = eventsProvider.savedEvents[index];
-                    return _SavedEventCard(event: event);
-                  },
-                ),
     );
   }
 }
@@ -430,66 +456,62 @@ class _SavedEventCard extends StatelessWidget {
   final Event event;
 
   const _SavedEventCard({required this.event});
+
+  String _formatDate(DateTime date) {
+    return DateFormat('EEE, MMMM d • h:mm a').format(date);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final eventsProvider = context.watch<EventsProvider>();
-
-    return RefreshIndicator(
-      onRefresh: () async {
-        await eventsProvider.fetchSavedEvents(refresh: true);
-      },
-      child: eventsProvider.isLoading && eventsProvider.savedEvents.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : eventsProvider.savedEvents.isEmpty
-              ? ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                  children: [
-                    Column(
-                      children: [
-                        Icon(
-                          Icons.bookmark_border_rounded,
-                          size: 72,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No saved events',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[700],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Save events to view them later.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: () => context.go('/events'),
-                          child: const Text('Discover Events'),
-                        ),
-                      ],
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.push('/events/${event.id}'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty)
+              Image.network(
+                AppConfig.getFullUrl(event.coverImageUrl),
+                height: 120,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  height: 120,
+                  color: Colors.grey[300],
+                  child: const Icon(Icons.image, size: 40),
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    event.title,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _formatDate(event.startTime),
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                  if (event.location?.address != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      event.location!.address!,
+                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
                     ),
                   ],
-                )
-              : ListView.separated(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
-                  itemCount: eventsProvider.savedEvents.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 22),
-                  itemBuilder: (context, index) {
-                    final event = eventsProvider.savedEvents[index];
-                    return _SavedEventCard(event: event);
-                  },
-                ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -704,14 +726,41 @@ class _RegisteredEventCard extends StatelessWidget {
             child: SizedBox(
               width: 96,
               height: 96,
-              child: Container(
-                color: Colors.grey.shade300,
-                child: const Icon(
-                  Icons.image_outlined,
-                  color: Colors.grey,
-                  size: 32,
-                ),
-              ),
+<<<<<<< HEAD
+              child:
+                  event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty
+                      ? Image.network(
+                          event.coverImageUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: Colors.grey.shade300,
+                            child: const Icon(
+                              Icons.image_outlined,
+                              color: Colors.grey,
+                              size: 32,
+                            ),
+                          ),
+                        )
+                      : Container(
+                          color: Colors.grey.shade300,
+                          child: const Icon(
+                            Icons.image_outlined,
+                            color: Colors.grey,
+                            size: 32,
+                          ),
+=======
+              child: event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty
+                  ? Image.network(
+                      AppConfig.getFullUrl(event.coverImageUrl),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: Colors.grey.shade300,
+                        child: const Icon(
+                          Icons.image_outlined,
+                          color: Colors.grey,
+                          size: 32,
+>>>>>>> 534734aca8c62dd454c1377225b37137575748fa
+                        ),
             ),
           ),
           const SizedBox(width: 16),

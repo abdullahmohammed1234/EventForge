@@ -55,9 +55,7 @@ class BottomFloatingNav extends StatelessWidget {
               label: 'Create',
             ),
             _buildNavItem(
-              icon: isFavorited 
-                  ? Icons.favorite 
-                  : Icons.favorite_outline,
+              icon: isFavorited ? Icons.favorite : Icons.favorite_outline,
               activeIcon: Icons.favorite,
               index: 3,
               label: 'Saved',
@@ -84,12 +82,12 @@ class BottomFloatingNav extends StatelessWidget {
   }) {
     final isActive = currentIndex == index;
     final Color iconColor;
-    
+
     if (isFavorite && isFavorited && accentColor != null) {
       iconColor = accentColor!;
     } else {
-      iconColor = isActive 
-          ? (accentColor ?? Colors.white) 
+      iconColor = isActive
+          ? (accentColor ?? Colors.white)
           : Colors.white.withOpacity(0.6);
     }
 

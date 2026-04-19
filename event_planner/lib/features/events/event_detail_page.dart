@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../../core/api/maps_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/config/app_config.dart';
 import 'events_provider.dart';
@@ -57,28 +59,33 @@ class _EventDetailPageState extends State<EventDetailPage>
   bool _isDescriptionExpanded = false;
   bool _isFavorite = false;
 
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _themeController.dispose();
+    super.dispose();
+  }
+
   Future<void> _openGoogleMaps(Event event) async {
-    // Try to use coordinates from location first
-    final double? lat = event.location?.latitude ?? event.latitude;
-    final double? lng = event.location?.longitude ?? event.longitude;
+    final String address = event.address ?? event.location?.name ?? '';
+    final String city = event.city ?? '';
     
-    String query;
-    if (lat != null && lng != null && lat != 0 && lng != 0) {
-      query = '$lat,$lng';
-    } else {
-      // Fallback to address
-      final String locationString = event.location?.name ?? event.city;
-      if (locationString.isNotEmpty) {
-        query = Uri.encodeComponent(locationString);
-      } else {
-        return;
-      }
+    if (address.isEmpty && city.isEmpty) {
+      return;
     }
     
-    final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$query');
+    final String searchQuery = address.isNotEmpty 
+        ? (city.isNotEmpty ? '$address, $city' : address)
+        : city;
     
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
+    final result = await MapsService.getOrsSearchUrl(address: address, city: city);
+    if (result != null && result['url'] != null) {
+      final url = Uri.parse(result['url'] as String);
+      try {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } catch (e) {
+        debugPrint('Error opening maps: $e');
+      }
     }
   }
 
@@ -133,7 +140,7 @@ class _EventDetailPageState extends State<EventDetailPage>
       // Check if event has an image - use image for theme if available
       if (event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty) {
         // Build the full URL if needed
-        String coverImageUrl = event.coverImageUrl!;
+        String coverImageUrl = AppConfig.getFullUrl(event.coverImageUrl);
         // Extract colors from the event image
         await _themeController.extractColorsFromImage(NetworkImage(coverImageUrl));
       } else {
@@ -142,13 +149,6 @@ class _EventDetailPageState extends State<EventDetailPage>
         _themeController.extractColorsFromGradient(categoryColor);
       }
     }
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    _themeController.dispose();
-    super.dispose();
   }
 
   String _formatDate(DateTime date) {
@@ -274,7 +274,7 @@ Join me at this event!
   Widget _buildHeroImage(Event event) {
     if (event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty) {
       // Convert relative URL to absolute URL
-      String coverImageUrl = event.coverImageUrl!;
+      String coverImageUrl = AppConfig.getFullUrl(event.coverImageUrl);
       return CachedNetworkImage(
         imageUrl: coverImageUrl,
         fit: BoxFit.cover,

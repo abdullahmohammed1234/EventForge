@@ -17,7 +17,13 @@ class DiscoverHeader extends StatelessWidget {
   /// Callback when "Your Groups" is tapped
   final VoidCallback? onYourGroupsTap;
 
-  /// Current selected index: 0 = Discover Events, 1 = Your Groups
+  /// Callback when "Hidden Gems" is tapped
+  final VoidCallback? onHiddenGemsTap;
+
+  /// Callback when "Underground" is tapped
+  final VoidCallback? onUndergroundTap;
+
+  /// Current selected index: 0 = Discover, 1 = Your Groups, 2 = Hidden Gems, 3 = Underground
   final int selectedIndex;
 
   const DiscoverHeader({
@@ -25,6 +31,8 @@ class DiscoverHeader extends StatelessWidget {
     this.onLocationTap,
     this.onDiscoverEventsTap,
     this.onYourGroupsTap,
+    this.onHiddenGemsTap,
+    this.onUndergroundTap,
     this.selectedIndex = 0,
   });
 
@@ -38,8 +46,35 @@ class DiscoverHeader extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             _buildTopNavigationRow(context),
+            _buildDiscoveryTabs(context),
             const Divider(height: 1, color: Color(0xFFE5E7EB)),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDiscoveryTabs(BuildContext context) {
+    // Only show Discover tab - removed Hidden Gems and Underground tabs
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildTabChip(BuildContext context, String label, bool isSelected, VoidCallback? onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.blue : Colors.grey[200],
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: isSelected ? Colors.white : Colors.grey[700],
+          ),
         ),
       ),
     );
