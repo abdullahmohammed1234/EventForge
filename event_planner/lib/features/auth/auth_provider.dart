@@ -143,6 +143,10 @@ class AuthProvider with ChangeNotifier {
         _token = data['data']['token'];
         _user = User.fromJson(data['data']['user']);
 
+        // Clear old profile image when switching accounts
+        _profileImage = null;
+        await storage.delete(key: 'profile_image');
+
         await storageHelper.saveToken(_token!);
         await storageHelper.saveUserData(jsonEncode(_user!.toJson()));
 
@@ -187,6 +191,10 @@ class AuthProvider with ChangeNotifier {
         final data = jsonDecode(response.body);
         _token = data['data']['token'];
         _user = User.fromJson(data['data']['user']);
+
+        // Clear old profile image when creating new account
+        _profileImage = null;
+        await storage.delete(key: 'profile_image');
 
         await storageHelper.saveToken(_token!);
         await storageHelper.saveUserData(jsonEncode(_user!.toJson()));

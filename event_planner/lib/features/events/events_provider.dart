@@ -61,6 +61,143 @@ class SubEvent {
   }
 }
 
+class TodoItem {
+  final String id;
+  final String title;
+  final String? description;
+  final String? assignedTo;
+  final bool isCompleted;
+  final DateTime? completedAt;
+  final DateTime createdAt;
+
+  TodoItem({
+    required this.id,
+    required this.title,
+    this.description,
+    this.assignedTo,
+    this.isCompleted = false,
+    this.completedAt,
+    required this.createdAt,
+  });
+
+  factory TodoItem.fromJson(Map<String, dynamic> json) {
+    return TodoItem(
+      id: json['_id'] ?? json['id'] ?? '',
+      title: json['title'],
+      description: json['description'],
+      assignedTo: json['assignedTo'],
+      isCompleted: json['isCompleted'] ?? false,
+      completedAt: json['completedAt'] != null
+          ? DateTime.parse(json['completedAt'])
+          : null,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : DateTime.now(),
+    );
+  }
+}
+
+class PollOption {
+  final String text;
+  final List<String> votes;
+
+  PollOption({
+    required this.text,
+    this.votes = const [],
+  });
+
+  factory PollOption.fromJson(Map<String, dynamic> json) {
+    return PollOption(
+      text: json['text'],
+      votes: json['votes'] != null
+          ? (json['votes'] as List)
+              .map((v) => v['user']?.toString() ?? '')
+              .toList()
+          : [],
+    );
+  }
+}
+
+class Poll {
+  final String id;
+  final String question;
+  final List<PollOption> options;
+  final bool isMultipleChoice;
+  final bool allowsNewOptions;
+  final DateTime? expiresAt;
+  final bool isActive;
+  final DateTime createdAt;
+
+  Poll({
+    required this.id,
+    required this.question,
+    this.options = const [],
+    this.isMultipleChoice = false,
+    this.allowsNewOptions = true,
+    this.expiresAt,
+    this.isActive = true,
+    required this.createdAt,
+  });
+
+  factory Poll.fromJson(Map<String, dynamic> json) {
+    return Poll(
+      id: json['_id'] ?? json['id'] ?? '',
+      question: json['question'],
+      options: json['options'] != null
+          ? (json['options'] as List)
+              .map((o) => PollOption.fromJson(o))
+              .toList()
+          : [],
+      isMultipleChoice: json['isMultipleChoice'] ?? false,
+      allowsNewOptions: json['allowsNewOptions'] ?? true,
+      expiresAt:
+          json['expiresAt'] != null ? DateTime.parse(json['expiresAt']) : null,
+      isActive: json['isActive'] ?? true,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : DateTime.now(),
+    );
+  }
+}
+
+class Comment {
+  final String id;
+  final String content;
+  final String createdBy;
+  final String? creatorName;
+  final String? creatorAvatarUrl;
+  final DateTime createdAt;
+
+  Comment({
+    required this.id,
+    required this.content,
+    required this.createdBy,
+    this.creatorName,
+    this.creatorAvatarUrl,
+    required this.createdAt,
+  });
+
+  factory Comment.fromJson(Map<String, dynamic> json) {
+    String creatorName = 'User';
+    String? creatorAvatarUrl;
+    if (json['createdBy'] != null) {
+      final creator = json['createdBy'];
+      creatorName = creator['displayName'] ?? 'User';
+      creatorAvatarUrl = creator['avatarUrl'];
+    }
+    return Comment(
+      id: json['_id'] ?? json['id'] ?? '',
+      content: json['content'],
+      createdBy: json['createdBy']?.toString() ?? '',
+      creatorName: creatorName,
+      creatorAvatarUrl: creatorAvatarUrl,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : DateTime.now(),
+    );
+  }
+}
+
 /// Organizer model for event detail
 class Organizer {
   final String? id;
@@ -239,6 +376,9 @@ class Event {
   final double? price;
   final EventLocation? location;
   final bool? isUserOrganizer;
+  final List<TodoItem> todoItems;
+  final List<Poll> polls;
+  final List<Comment> comments;
 
   Event({
     required this.id,
@@ -273,6 +413,9 @@ class Event {
     this.isUserOrganizer,
     this.locationName,
     this.organizerName,
+    this.todoItems = const [],
+    this.polls = const [],
+    this.comments = const [],
   });
 
   factory Event.fromJson(Map<String, dynamic> json) {
@@ -343,6 +486,23 @@ class Event {
     final isFree =
         json['isFree'] == true || json['price'] == null || json['price'] == 0;
 
+    List<TodoItem> todoItemsList = [];
+    if (json['todoItems'] != null) {
+      todoItemsList =
+          (json['todoItems'] as List).map((e) => TodoItem.fromJson(e)).toList();
+    }
+
+    List<Poll> pollsList = [];
+    if (json['polls'] != null) {
+      pollsList = (json['polls'] as List).map((e) => Poll.fromJson(e)).toList();
+    }
+
+    List<Comment> commentsList = [];
+    if (json['comments'] != null) {
+      commentsList =
+          (json['comments'] as List).map((e) => Comment.fromJson(e)).toList();
+    }
+
     return Event(
       id: json['id'] ?? json['_id'],
       title: json['title'],
@@ -387,6 +547,9 @@ class Event {
       price: json['price'] != null ? (json['price'] as num).toDouble() : null,
       location: eventLocation,
       isUserOrganizer: json['isUserOrganizer'] ?? false,
+      todoItems: todoItemsList,
+      polls: pollsList,
+      comments: commentsList,
     );
   }
 

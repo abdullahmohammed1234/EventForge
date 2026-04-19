@@ -39,16 +39,28 @@ class _MessagesScreenState extends State<MessagesScreen> {
     }
   }
 
+  String _getChatTitle(SocialProvider provider, String currentUserId) {
+    try {
+      final conversation = provider.conversations.firstWhere(
+        (c) => c.id == widget.conversationId,
+      );
+      return conversation.getNameForUser(currentUserId);
+    } catch (e) {
+      return 'Chat';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<SocialProvider>();
     final userId = context.read<AuthProvider>().user?.id ?? '';
     final messages = provider.currentMessages;
+    final chatTitle = _getChatTitle(provider, userId);
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Chat'),
+        title: Text(chatTitle),
         backgroundColor: Colors.white,
       ),
       body: SafeArea(
@@ -192,6 +204,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
       if (success) {
         _messageController.clear();
         _loadMessages();
+        // Reload conversations list to update last message
+        await provider.loadConversations(token);
       }
     }
   }

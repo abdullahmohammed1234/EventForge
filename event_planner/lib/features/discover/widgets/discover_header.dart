@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 /// - Center: "Discover Events" (navigates to Discover page)
 /// - Right: "Your Groups" (navigates to Groups page)
 class DiscoverHeader extends StatelessWidget {
+  final String? title;
+
   /// Callback when "Near Me" is tapped - opens location selector
   final VoidCallback? onLocationTap;
 
@@ -26,15 +28,15 @@ class DiscoverHeader extends StatelessWidget {
   /// Current selected index: 0 = Discover, 1 = Your Groups, 2 = Hidden Gems, 3 = Underground
   final int selectedIndex;
 
-  const DiscoverHeader({
-    super.key,
-    this.onLocationTap,
-    this.onDiscoverEventsTap,
-    this.onYourGroupsTap,
-    this.onHiddenGemsTap,
-    this.onUndergroundTap,
-    this.selectedIndex = 0,
-  });
+  const DiscoverHeader(
+      {super.key,
+      this.onLocationTap,
+      this.onDiscoverEventsTap,
+      this.onYourGroupsTap,
+      this.onHiddenGemsTap,
+      this.onUndergroundTap,
+      this.selectedIndex = 0,
+      this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +61,8 @@ class DiscoverHeader extends StatelessWidget {
     return const SizedBox.shrink();
   }
 
-  Widget _buildTabChip(BuildContext context, String label, bool isSelected, VoidCallback? onTap) {
+  Widget _buildTabChip(BuildContext context, String label, bool isSelected,
+      VoidCallback? onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(

@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../auth/auth_provider.dart';
 import 'social_provider.dart';
+import '../../core/api/social_service.dart';
 
 class YourGroupsScreen extends StatefulWidget {
   const YourGroupsScreen({super.key});
@@ -172,8 +174,53 @@ class _YourGroupsScreenState extends State<YourGroupsScreen>
               )
             else
               ...groups.map((group) => _buildGroupCard(group, provider)),
+            const SizedBox(height: 24),
+            _buildDiscoverSection(provider),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDiscoverSection(SocialProvider provider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Discover Groups',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            TextButton(
+              onPressed: () => _showDiscoverGroupsSheet(context, provider),
+              child: const Text('Browse'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Find public groups to join',
+          style: TextStyle(color: Colors.grey, fontSize: 13),
+        ),
+      ],
+    );
+  }
+
+  void _showDiscoverGroupsSheet(
+      BuildContext context, SocialProvider provider) async {
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _DiscoverGroupsSheet(
+        token: token,
+        socialService: provider.socialService,
+        onJoinGroup: () => provider.loadGroups(token),
       ),
     );
   }
@@ -265,7 +312,13 @@ class _YourGroupsScreenState extends State<YourGroupsScreen>
                 ],
               ),
             ),
-            if (group.isAdmin)
+            IconButton(
+              icon: const Icon(Icons.chat_bubble_outline,
+                  color: Color(0xFFFE76B8)),
+              onPressed: () => _openGroupChat(group, provider),
+              tooltip: 'Open Chat',
+            ),
+            if (group.isCurrentUserAdmin)
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -303,7 +356,6 @@ class _YourGroupsScreenState extends State<YourGroupsScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Drag handle
             Container(
               width: 40,
               height: 4,
@@ -313,7 +365,6 @@ class _YourGroupsScreenState extends State<YourGroupsScreen>
               ),
             ),
             const SizedBox(height: 20),
-            // Group icon
             Container(
               width: 72,
               height: 72,
@@ -328,7 +379,6 @@ class _YourGroupsScreenState extends State<YourGroupsScreen>
               ),
             ),
             const SizedBox(height: 16),
-            // Group name
             Text(
               group.name,
               style: const TextStyle(
@@ -337,7 +387,6 @@ class _YourGroupsScreenState extends State<YourGroupsScreen>
               ),
             ),
             const SizedBox(height: 8),
-            // Member count
             Text(
               '${group.memberCount} member${group.memberCount != 1 ? 's' : ''}',
               style: TextStyle(
@@ -345,7 +394,6 @@ class _YourGroupsScreenState extends State<YourGroupsScreen>
                 fontSize: 16,
               ),
             ),
-            // Description
             if (group.description != null && group.description!.isNotEmpty) ...[
               const SizedBox(height: 16),
               Text(
@@ -355,11 +403,9 @@ class _YourGroupsScreenState extends State<YourGroupsScreen>
               ),
             ],
             const SizedBox(height: 24),
-            // Action buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                // Invite friends button
                 _buildGroupActionButton(
                   icon: Icons.person_add,
                   label: 'Invite',
@@ -368,7 +414,6 @@ class _YourGroupsScreenState extends State<YourGroupsScreen>
                     _showInviteToGroup(group);
                   },
                 ),
-                // Share button
                 _buildGroupActionButton(
                   icon: Icons.share,
                   label: 'Share',
@@ -377,8 +422,7 @@ class _YourGroupsScreenState extends State<YourGroupsScreen>
                     _shareGroup(group);
                   },
                 ),
-                // Leave button (for admins)
-                if (group.isAdmin)
+                if (group.isCurrentUserAdmin)
                   _buildGroupActionButton(
                     icon: Icons.exit_to_app,
                     label: 'Leave',
@@ -962,6 +1006,7 @@ class _YourGroupsScreenState extends State<YourGroupsScreen>
   Widget _buildChatPreview(Conversation conversation, SocialProvider provider) {
     final userId = context.read<AuthProvider>().user?.id ?? '';
     final unreadCount = conversation.getUnread(userId);
+    final chatName = conversation.getNameForUser(userId);
 
     return GestureDetector(
       onTap: () {
@@ -1006,7 +1051,7 @@ class _YourGroupsScreenState extends State<YourGroupsScreen>
                   Row(
                     children: [
                       Text(
-                        conversation.name,
+                        chatName,
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                       const Spacer(),
@@ -1309,6 +1354,35 @@ class _YourGroupsScreenState extends State<YourGroupsScreen>
     );
   }
 
+  Future<void> _openGroupChat(
+      SocialGroup group, SocialProvider provider) async {
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+
+    try {
+      final response =
+          await provider.socialService.getOrCreateGroupConversation(
+        token,
+        group.id,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final conversationId = data['data']['id'];
+
+        if (mounted) {
+          context.push('/messages/$conversationId');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to open chat: $e')),
+        );
+      }
+    }
+  }
+
   void _showCreateGroupDialog() {
     final nameController = TextEditingController();
     final descController = TextEditingController();
@@ -1588,5 +1662,136 @@ class _YourGroupsScreenState extends State<YourGroupsScreen>
           ...friends.map((f) => _buildFriendListItem(f, provider)),
       ],
     );
+  }
+}
+
+class _DiscoverGroupsSheet extends StatefulWidget {
+  final String token;
+  final SocialService socialService;
+  final VoidCallback onJoinGroup;
+
+  const _DiscoverGroupsSheet({
+    required this.token,
+    required this.socialService,
+    required this.onJoinGroup,
+  });
+
+  @override
+  State<_DiscoverGroupsSheet> createState() => _DiscoverGroupsSheetState();
+}
+
+class _DiscoverGroupsSheetState extends State<_DiscoverGroupsSheet> {
+  List<SocialGroup> _groups = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadGroups();
+  }
+
+  Future<void> _loadGroups() async {
+    try {
+      final response = await widget.socialService.discoverGroups(widget.token);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          _groups = (data['data'] as List)
+              .map((g) => SocialGroup.fromJson(g))
+              .toList();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.7,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: Colors.grey)),
+            ),
+            child: Row(
+              children: [
+                const Text(
+                  'Discover Groups',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _groups.isEmpty
+                    ? const Center(
+                        child: Text('No groups to discover'),
+                      )
+                    : ListView.builder(
+                        itemCount: _groups.length,
+                        itemBuilder: (context, index) {
+                          final group = _groups[index];
+                          return ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: const Color(0xFFFFE4F0),
+                              child: const Icon(Icons.group,
+                                  color: Color(0xFFFE76B8)),
+                            ),
+                            title: Text(group.name),
+                            subtitle: Text('${group.memberCount} members'),
+                            trailing: ElevatedButton(
+                              onPressed: () => _joinGroup(group.id),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFFE76B8),
+                              ),
+                              child: const Text('Join'),
+                            ),
+                          );
+                        },
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _joinGroup(String groupId) async {
+    try {
+      final response =
+          await widget.socialService.joinGroup(widget.token, groupId);
+      if (response.statusCode == 200) {
+        widget.onJoinGroup();
+        setState(() {
+          _groups.removeWhere((g) => g.id == groupId);
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Joined group!')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to join: $e')),
+        );
+      }
+    }
   }
 }

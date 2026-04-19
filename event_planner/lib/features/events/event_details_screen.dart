@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:add_2_calendar/add_2_calendar.dart' as cal;
 import '../../core/api/maps_service.dart';
 import 'events_provider.dart';
 import '../auth/auth_provider.dart';
@@ -66,16 +67,17 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   Future<void> _openGoogleMaps(Event event) async {
     final String address = event.address ?? '';
     final String city = event.city ?? '';
-    
+
     if (address.isEmpty && city.isEmpty) {
       return;
     }
-    
-    final String searchQuery = address.isNotEmpty 
+
+    final String searchQuery = address.isNotEmpty
         ? (city.isNotEmpty ? '$address, $city' : address)
         : city;
-    
-    final result = await MapsService.getOrsSearchUrl(address: address, city: city);
+
+    final result =
+        await MapsService.getOrsSearchUrl(address: address, city: city);
     if (result != null && result['url'] != null) {
       final url = Uri.parse(result['url'] as String);
       try {
@@ -88,8 +90,10 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
 
   Future<void> _getPublicTransit(Event event) async {
     String query;
-    if (event.latitude != null && event.longitude != null &&
-        event.latitude != 0 && event.longitude != 0) {
+    if (event.latitude != null &&
+        event.longitude != null &&
+        event.latitude != 0 &&
+        event.longitude != 0) {
       query = '${event.latitude},${event.longitude}';
     } else {
       // Use address or city for geocoding
@@ -97,16 +101,36 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
       if (locationString.isNotEmpty) {
         query = Uri.encodeComponent(locationString);
       } else {
-return; // No location available
+        return; // No location available
       }
     }
-    
-    final url = Uri.parse('https://www.openstreetmap.org/directions?from=&to=$query&route=pedestrian');
-    
+
+    final url = Uri.parse(
+        'https://www.openstreetmap.org/directions?from=&to=$query&route=pedestrian');
+
     try {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } catch (e) {
       debugPrint('Error opening map: $e');
+    }
+  }
+
+  Future<void> _addToCalendar(Event event) async {
+    final calendarEvent = cal.Event(
+      title: event.title,
+      description: event.description ?? event.title,
+      location: event.address ?? event.city,
+      startDate: event.startTime,
+      endDate: event.endTime ?? event.startTime.add(const Duration(hours: 2)),
+    );
+
+    final result = await cal.Add2Calendar.addEvent2Cal(calendarEvent);
+    if (!result) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No calendar app found')),
+        );
+      }
     }
   }
 
@@ -115,7 +139,8 @@ return; // No location available
     final eventsProvider = context.watch<EventsProvider>();
     final authProvider = context.watch<AuthProvider>();
     final event = eventsProvider.currentEvent;
-    final themeColor = event != null ? _getCategoryColor(event.category) : Colors.blue;
+    final themeColor =
+        event != null ? _getCategoryColor(event.category) : Colors.blue;
 
     return Scaffold(
       appBar: AppBar(
@@ -134,7 +159,7 @@ return; // No location available
                     children: [
                       // Hero Image Section
                       _buildHeroSection(event, themeColor),
-                      
+
                       // Content
                       Padding(
                         padding: const EdgeInsets.all(16),
@@ -143,28 +168,40 @@ return; // No location available
                           children: [
                             // Category Badge
                             _buildCategoryBadge(event.category, themeColor),
-                            
+
                             const SizedBox(height: 16),
-                            
+
                             // Date & Time Section
                             _buildSectionTitle('Date & Time'),
                             const SizedBox(height: 8),
                             _buildInfoCard(
                               icon: Icons.calendar_today,
                               title: _formatDate(event.startTime),
-                              subtitle: '${_formatTime(event.startTime)} - ${event.endTime != null ? _formatTime(event.endTime!) : "TBD"}',
+                              subtitle:
+                                  '${_formatTime(event.startTime)} - ${event.endTime != null ? _formatTime(event.endTime!) : "TBD"}',
                               themeColor: themeColor,
                             ),
-                            
+
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () => _addToCalendar(event),
+                                icon: const Icon(Icons.calendar_month),
+                                label: const Text('Add to Calendar'),
+                              ),
+                            ),
+
                             const SizedBox(height: 20),
-                            
+
                             // Location Section
                             _buildSectionTitle('Location'),
                             const SizedBox(height: 8),
                             _buildInfoCard(
                               icon: Icons.location_on,
                               title: event.city,
-                              subtitle: event.address ?? 'Address not specified',
+                              subtitle:
+                                  event.address ?? 'Address not specified',
                               themeColor: themeColor,
                             ),
                             const SizedBox(height: 12),
@@ -187,11 +224,12 @@ return; // No location available
                                 ),
                               ],
                             ),
-                            
+
                             const SizedBox(height: 20),
-                            
+
                             // About Section
-                            if (event.description != null && event.description!.isNotEmpty) ...[
+                            if (event.description != null &&
+                                event.description!.isNotEmpty) ...[
                               _buildSectionTitle('About'),
                               const SizedBox(height: 8),
                               Container(
@@ -211,7 +249,7 @@ return; // No location available
                               ),
                               const SizedBox(height: 20),
                             ],
-                            
+
                             // Schedule Section
                             if (event.subEvents.isNotEmpty) ...[
                               _buildSectionTitle('Schedule'),
@@ -219,19 +257,19 @@ return; // No location available
                               _buildScheduleList(event.subEvents),
                               const SizedBox(height: 20),
                             ],
-                            
+
                             // Attendees Section
                             _buildSectionTitle('Attendees'),
                             const SizedBox(height: 8),
                             _buildAttendeesInfo(event, themeColor),
-                            
+
                             const SizedBox(height: 20),
-                            
+
                             // Organizer Section
                             _buildSectionTitle('Organizer'),
                             const SizedBox(height: 8),
                             _buildOrganizerInfo(event, themeColor),
-                            
+
                             const SizedBox(height: 100),
                           ],
                         ),
@@ -281,7 +319,8 @@ return; // No location available
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.calendar_today, color: Colors.white, size: 16),
+                  const Icon(Icons.calendar_today,
+                      color: Colors.white, size: 16),
                   const SizedBox(width: 6),
                   Text(
                     DateFormat('MMM d, yyyy').format(event.startTime),
@@ -405,7 +444,8 @@ return; // No location available
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.green.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(6),
@@ -440,7 +480,8 @@ return; // No location available
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              if (subEvent.description != null && subEvent.description!.isNotEmpty) ...[
+              if (subEvent.description != null &&
+                  subEvent.description!.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text(
                   subEvent.description!,
@@ -450,11 +491,13 @@ return; // No location available
                   ),
                 ),
               ],
-              if (subEvent.location != null && subEvent.location!.isNotEmpty) ...[
+              if (subEvent.location != null &&
+                  subEvent.location!.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(Icons.location_on_outlined, size: 14, color: Colors.grey[500]),
+                    Icon(Icons.location_on_outlined,
+                        size: 14, color: Colors.grey[500]),
                     const SizedBox(width: 4),
                     Text(
                       subEvent.location!,
@@ -587,7 +630,8 @@ return; // No location available
     // Get authProvider from context for registration button
     final authProvider = context.watch<AuthProvider>();
     final isRegistered = event.isUserRegistered;
-    final hasRegistrationId = event.registrationId != null && event.registrationId!.isNotEmpty;
+    final hasRegistrationId =
+        event.registrationId != null && event.registrationId!.isNotEmpty;
 
     return Container(
       padding: const EdgeInsets.all(16),

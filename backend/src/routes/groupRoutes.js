@@ -20,6 +20,13 @@ router.get('/', auth, asyncWrapper(socialController.getMyGroups));
 router.post('/', auth, asyncWrapper(socialController.createGroup));
 
 /**
+ * @desc    Get discoverable groups
+ * @route   GET /api/groups/discover
+ * @access  Private
+ */
+router.get('/discover', auth, asyncWrapper(socialController.discoverGroups));
+
+/**
  * @desc    Get group by ID
  * @route   GET /api/groups/:id
  * @access  Private
@@ -46,5 +53,12 @@ router.post('/:id/leave', auth, asyncWrapper(socialController.leaveGroup));
  * @access  Private
  */
 router.post('/:id/invite', auth, asyncWrapper(socialController.inviteUserToGroup));
+
+/**
+ * @desc    Update member role (promote/demote)
+ * @route   PUT /api/groups/:id/members/:userId/role
+ * @access  Private (Admin only)
+ */
+router.put('/:id/members/:userId/role', auth, asyncWrapper(socialController.updateMemberRole));
 
 module.exports = router;

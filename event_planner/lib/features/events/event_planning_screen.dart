@@ -8,16 +8,20 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:add_2_calendar/add_2_calendar.dart' as cal;
 import 'dart:convert';
 import '../../core/api/maps_service.dart';
+import '../../core/api/event_service.dart';
 import 'events_provider.dart';
 import '../safety/safety_center_screen.dart';
+import '../auth/auth_provider.dart';
 
 class EventPlanningScreen extends StatefulWidget {
   final String eventId;
   final bool showTicket;
 
-  const EventPlanningScreen({super.key, required this.eventId, this.showTicket = false});
+  const EventPlanningScreen(
+      {super.key, required this.eventId, this.showTicket = false});
 
   @override
   State<EventPlanningScreen> createState() => _EventPlanningScreenState();
@@ -25,7 +29,7 @@ class EventPlanningScreen extends StatefulWidget {
 
 class _EventPlanningScreenState extends State<EventPlanningScreen> {
   GoogleMapController? _mapController;
-  
+
   // Planning data
   String _transportationPlan = '';
   String _foodPlan = '';
@@ -33,19 +37,20 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
   String _tripPlan = '';
   String _contacts = '';
   bool _isLoading = true;
-  
+
   // New fields for transportation choices
   String _selectedTransportation = ''; // 'car', 'transit', 'bike'
   String _estimatedDistance = '';
   String _estimatedTime = '';
-  
+
   // Sample contacts for the event
   List<Map<String, String>> _eventContacts = [];
-  
+
   // Key for storing contacts list
   static const String _contactsKey = 'event_contacts_';
-  
-  final TextEditingController _transportationController = TextEditingController();
+
+  final TextEditingController _transportationController =
+      TextEditingController();
   final TextEditingController _foodController = TextEditingController();
   final TextEditingController _musicController = TextEditingController();
   final TextEditingController _tripController = TextEditingController();
@@ -64,25 +69,28 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       setState(() {
-        _transportationPlan = prefs.getString('transportation_${widget.eventId}') ?? '';
+        _transportationPlan =
+            prefs.getString('transportation_${widget.eventId}') ?? '';
         _foodPlan = prefs.getString('food_${widget.eventId}') ?? '';
         _musicPlan = prefs.getString('music_${widget.eventId}') ?? '';
         _tripPlan = prefs.getString('trip_${widget.eventId}') ?? '';
         _contacts = prefs.getString('contacts_${widget.eventId}') ?? '';
-        
+
         _transportationController.text = _transportationPlan;
         _foodController.text = _foodPlan;
         _musicController.text = _musicPlan;
         _tripController.text = _tripPlan;
         _contactsController.text = _contacts;
-        
+
         // Load contacts from SharedPreferences
-        final contactsJson = prefs.getString('${_contactsKey}${widget.eventId}');
+        final contactsJson =
+            prefs.getString('${_contactsKey}${widget.eventId}');
         if (contactsJson != null && contactsJson.isNotEmpty) {
           final List<dynamic> decoded = json.decode(contactsJson);
-          _eventContacts = decoded.map((e) => Map<String, String>.from(e)).toList();
+          _eventContacts =
+              decoded.map((e) => Map<String, String>.from(e)).toList();
         }
-        
+
         _isLoading = false;
       });
     } catch (e) {
@@ -110,21 +118,22 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
   Future<void> _openGoogleMaps() async {
     final eventsProvider = context.read<EventsProvider>();
     final event = eventsProvider.currentEvent;
-    
+
     if (event == null) return;
-    
+
     final String address = event.address ?? '';
     final String city = event.city ?? '';
-    
+
     if (address.isEmpty && city.isEmpty) {
       return;
     }
-    
-    final String searchQuery = address.isNotEmpty 
+
+    final String searchQuery = address.isNotEmpty
         ? (city.isNotEmpty ? '$address, $city' : address)
         : city;
-    
-    final result = await MapsService.getOrsSearchUrl(address: address, city: city);
+
+    final result =
+        await MapsService.getOrsSearchUrl(address: address, city: city);
     if (result != null && result['url'] != null) {
       final url = Uri.parse(result['url'] as String);
       try {
@@ -138,12 +147,14 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
   Future<void> _getDirections() async {
     final eventsProvider = context.read<EventsProvider>();
     final event = eventsProvider.currentEvent;
-    
+
     if (event == null) return;
-    
+
     String query;
-    if (event.latitude != null && event.longitude != null &&
-        event.latitude != 0 && event.longitude != 0) {
+    if (event.latitude != null &&
+        event.longitude != null &&
+        event.latitude != 0 &&
+        event.longitude != 0) {
       query = '${event.latitude},${event.longitude}';
     } else {
       // Use address or city for geocoding
@@ -154,9 +165,10 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
         return; // No location available
       }
     }
-    
-    final url = Uri.parse('https://www.openstreetmap.org/directions?from=&to=$query&route=car');
-    
+
+    final url = Uri.parse(
+        'https://www.openstreetmap.org/directions?from=&to=$query&route=car');
+
     try {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } catch (e) {
@@ -167,12 +179,14 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
   Future<void> _getPublicTransit() async {
     final eventsProvider = context.read<EventsProvider>();
     final event = eventsProvider.currentEvent;
-    
+
     if (event == null) return;
-    
+
     String query;
-    if (event.latitude != null && event.longitude != null &&
-        event.latitude != 0 && event.longitude != 0) {
+    if (event.latitude != null &&
+        event.longitude != null &&
+        event.latitude != 0 &&
+        event.longitude != 0) {
       query = '${event.latitude},${event.longitude}';
     } else {
       // Use address or city for geocoding
@@ -180,12 +194,13 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
       if (locationString.isNotEmpty) {
         query = Uri.encodeComponent(locationString);
       } else {
-return; // No location available
+        return; // No location available
       }
     }
-    
-    final url = Uri.parse('https://www.openstreetmap.org/directions?from=&to=$query&route=pedestrian');
-    
+
+    final url = Uri.parse(
+        'https://www.openstreetmap.org/directions?from=&to=$query&route=pedestrian');
+
     try {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } catch (e) {
@@ -194,8 +209,10 @@ return; // No location available
   }
 
   Set<Marker> _getMarkers(Event event) {
-    if (event.latitude != null && event.longitude != null &&
-        event.latitude != 0 && event.longitude != 0) {
+    if (event.latitude != null &&
+        event.longitude != null &&
+        event.latitude != 0 &&
+        event.longitude != 0) {
       return {
         Marker(
           markerId: MarkerId(event.id),
@@ -211,8 +228,10 @@ return; // No location available
   }
 
   CameraPosition _getInitialPosition(Event event) {
-    if (event.latitude != null && event.longitude != null &&
-        event.latitude != 0 && event.longitude != 0) {
+    if (event.latitude != null &&
+        event.longitude != null &&
+        event.latitude != 0 &&
+        event.longitude != 0) {
       return CameraPosition(
         target: LatLng(event.latitude!, event.longitude!),
         zoom: 14,
@@ -228,17 +247,19 @@ return; // No location available
 
   void _savePlan() async {
     final prefs = await SharedPreferences.getInstance();
-    
-    await prefs.setString('transportation_${widget.eventId}', _transportationController.text);
+
+    await prefs.setString(
+        'transportation_${widget.eventId}', _transportationController.text);
     await prefs.setString('food_${widget.eventId}', _foodController.text);
     await prefs.setString('music_${widget.eventId}', _musicController.text);
     await prefs.setString('trip_${widget.eventId}', _tripController.text);
-    await prefs.setString('contacts_${widget.eventId}', _contactsController.text);
-    
+    await prefs.setString(
+        'contacts_${widget.eventId}', _contactsController.text);
+
     // Save contacts list to SharedPreferences
     final contactsJson = json.encode(_eventContacts);
     await prefs.setString('${_contactsKey}${widget.eventId}', contactsJson);
-    
+
     setState(() {
       _transportationPlan = _transportationController.text;
       _foodPlan = _foodController.text;
@@ -246,7 +267,7 @@ return; // No location available
       _tripPlan = _tripController.text;
       _contacts = _contactsController.text;
     });
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Plan saved successfully!'),
@@ -287,11 +308,724 @@ return; // No location available
 
                       // Action Buttons Section
                       _buildActionButtonsSection(event),
+                      const SizedBox(height: 24),
+
+                      // Collaborative To-Do List Section
+                      _buildTodoListSection(event),
+                      const SizedBox(height: 24),
+
+                      // Polls Section
+                      _buildPollsSection(event),
+                      const SizedBox(height: 24),
+
+                      // Comments Section
+                      _buildCommentsSection(event),
                       const SizedBox(height: 32),
                     ],
                   ),
                 ),
     );
+  }
+
+  // ==================== COLLABORATION FEATURES ====================
+
+  Widget _buildTodoListSection(Event event) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.checklist, color: Theme.of(context).primaryColor),
+                const SizedBox(width: 8),
+                const Text(
+                  'Collaborative To-Do List',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.add_circle, color: Colors.green),
+                  onPressed: () => _showAddTodoDialog(event),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (event.todoItems.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.assignment_turned_in, color: Colors.grey),
+                    SizedBox(width: 12),
+                    Text('No tasks yet. Add one!',
+                        style: TextStyle(color: Colors.grey)),
+                  ],
+                ),
+              )
+            else
+              ...event.todoItems.map((todo) => _buildTodoItem(event, todo)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTodoItem(Event event, TodoItem todo) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: todo.isCompleted ? Colors.green[50] : Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Row(
+        children: [
+          Checkbox(
+            value: todo.isCompleted,
+            onChanged: (value) => _toggleTodo(event, todo),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  todo.title,
+                  style: TextStyle(
+                    decoration:
+                        todo.isCompleted ? TextDecoration.lineThrough : null,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                if (todo.description != null && todo.description!.isNotEmpty)
+                  Text(
+                    todo.description!,
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+            onPressed: () => _deleteTodo(event, todo),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddTodoDialog(Event event) {
+    final titleController = TextEditingController();
+    final descController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Task'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(
+                labelText: 'Task Title',
+                prefixIcon: Icon(Icons.task),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: descController,
+              decoration: const InputDecoration(
+                labelText: 'Description (optional)',
+                prefixIcon: Icon(Icons.description),
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (titleController.text.isNotEmpty) {
+                await _addTodo(
+                    event, titleController.text, descController.text);
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _addTodo(Event event, String title, String description) async {
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+
+    final eventService = EventService();
+    final response = await eventService.addTodoItem(
+      eventId: event.id,
+      title: title,
+      description: description.isNotEmpty ? description : null,
+      token: token,
+    );
+
+    if (response.statusCode == 201) {
+      if (mounted) {
+        context.read<EventsProvider>().getEventById(event.id);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Task added!'), backgroundColor: Colors.green),
+        );
+      }
+    }
+  }
+
+  Future<void> _toggleTodo(Event event, TodoItem todo) async {
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+
+    final eventService = EventService();
+    final response = await eventService.updateTodoItem(
+      eventId: event.id,
+      todoId: todo.id,
+      isCompleted: !todo.isCompleted,
+      token: token,
+    );
+
+    if (response.statusCode == 200) {
+      if (mounted) {
+        context.read<EventsProvider>().getEventById(event.id);
+      }
+    }
+  }
+
+  Future<void> _deleteTodo(Event event, TodoItem todo) async {
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+
+    final eventService = EventService();
+    final response = await eventService.deleteTodoItem(
+      eventId: event.id,
+      todoId: todo.id,
+      token: token,
+    );
+
+    if (response.statusCode == 200) {
+      if (mounted) {
+        context.read<EventsProvider>().getEventById(event.id);
+      }
+    }
+  }
+
+  Widget _buildPollsSection(Event event) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.poll, color: Colors.orange[700]),
+                const SizedBox(width: 8),
+                const Text(
+                  'Group Polls',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.add_circle, color: Colors.green),
+                  onPressed: () => _showCreatePollDialog(event),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (event.polls.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.how_to_vote, color: Colors.grey),
+                    SizedBox(width: 12),
+                    Text('No polls yet. Create one!',
+                        style: TextStyle(color: Colors.grey)),
+                  ],
+                ),
+              )
+            else
+              ...event.polls.map((poll) => _buildPollItem(event, poll)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPollItem(Event event, Poll poll) {
+    final userId = context.read<AuthProvider>().user?.id ?? '';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  poll.question,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 15),
+                ),
+              ),
+              if (!poll.isActive)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text('Closed', style: TextStyle(fontSize: 10)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...poll.options.asMap().entries.map((entry) {
+            final index = entry.key;
+            final option = entry.value;
+            final voteCount = option.votes.length;
+            final hasVoted = option.votes.contains(userId);
+            final totalVotes =
+                poll.options.fold(0, (sum, o) => sum + o.votes.length);
+            final percentage =
+                totalVotes > 0 ? (voteCount / totalVotes * 100).round() : 0;
+
+            return GestureDetector(
+              onTap:
+                  poll.isActive ? () => _voteOnPoll(event, poll, index) : null,
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: Stack(
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: hasVoted ? Colors.blue[50] : Colors.grey[100],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: hasVoted ? Colors.blue : Colors.grey[300]!,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            hasVoted
+                                ? Icons.check_circle
+                                : Icons.circle_outlined,
+                            color: hasVoted ? Colors.blue : Colors.grey,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(option.text)),
+                          Text('$voteCount ($percentage%)',
+                              style: TextStyle(
+                                  color: Colors.grey[600], fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    if (percentage > 0)
+                      Positioned.fill(
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: FractionallySizedBox(
+                              widthFactor: percentage / 100,
+                              child: Container(
+                                color: Colors.blue.withOpacity(0.2),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          }),
+          if (poll.isActive)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (event.isUserOrganizer == true)
+                  TextButton(
+                    onPressed: () => _closePoll(event, poll),
+                    child: const Text('Close Poll',
+                        style: TextStyle(fontSize: 12)),
+                  ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showCreatePollDialog(Event event) {
+    final questionController = TextEditingController();
+    final List<TextEditingController> optionControllers = [
+      TextEditingController(),
+      TextEditingController(),
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Create Poll'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: questionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Question',
+                    prefixIcon: Icon(Icons.help_outline),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Options (at least 2)',
+                      style: TextStyle(fontSize: 12, color: Colors.grey)),
+                ),
+                const SizedBox(height: 8),
+                ...optionControllers.asMap().entries.map((entry) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: TextField(
+                      controller: entry.value,
+                      decoration: InputDecoration(
+                        labelText: 'Option ${entry.key + 1}',
+                        prefixIcon: const Icon(Icons.circle_outlined, size: 16),
+                      ),
+                    ),
+                  );
+                }),
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      optionControllers.add(TextEditingController());
+                    });
+                  },
+                  icon: const Icon(Icons.add, size: 16),
+                  label: const Text('Add Option'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final options = optionControllers
+                    .map((c) => c.text)
+                    .where((t) => t.isNotEmpty)
+                    .toList();
+                if (questionController.text.isNotEmpty && options.length >= 2) {
+                  await _createPoll(event, questionController.text, options);
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Create'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _createPoll(
+      Event event, String question, List<String> options) async {
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+
+    final eventService = EventService();
+    final response = await eventService.addPoll(
+      eventId: event.id,
+      question: question,
+      options: options,
+      token: token,
+    );
+
+    if (response.statusCode == 201) {
+      if (mounted) {
+        context.read<EventsProvider>().getEventById(event.id);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Poll created!'), backgroundColor: Colors.green),
+        );
+      }
+    }
+  }
+
+  Future<void> _voteOnPoll(Event event, Poll poll, int optionIndex) async {
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+
+    final eventService = EventService();
+    final response = await eventService.voteOnPoll(
+      eventId: event.id,
+      pollId: poll.id,
+      optionIndex: optionIndex,
+      token: token,
+    );
+
+    if (response.statusCode == 200) {
+      if (mounted) {
+        context.read<EventsProvider>().getEventById(event.id);
+      }
+    }
+  }
+
+  Future<void> _closePoll(Event event, Poll poll) async {
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+
+    final eventService = EventService();
+    final response = await eventService.closePoll(
+      eventId: event.id,
+      pollId: poll.id,
+      token: token,
+    );
+
+    if (response.statusCode == 200) {
+      if (mounted) {
+        context.read<EventsProvider>().getEventById(event.id);
+      }
+    }
+  }
+
+  Widget _buildCommentsSection(Event event) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.comment, color: Colors.purple[700]),
+                const SizedBox(width: 8),
+                const Text(
+                  'Discussion',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Add comment input
+            Row(
+              children: [
+                Flexible(
+                  child: TextField(
+                    controller: _commentController,
+                    decoration: InputDecoration(
+                      hintText: 'Write a comment...',
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                    ),
+                    maxLines: 2,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.send, color: Colors.blue),
+                  onPressed: () => _postComment(event),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (event.comments.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.chat_bubble_outline, color: Colors.grey),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text('No comments yet. Start the conversation!',
+                          style: TextStyle(color: Colors.grey)),
+                    ),
+                  ],
+                ),
+              )
+            else
+              ...event.comments
+                  .map((comment) => _buildCommentItem(event, comment)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  final TextEditingController _commentController = TextEditingController();
+
+  Widget _buildCommentItem(Event event, Comment comment) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 14,
+                backgroundColor: Colors.blue[100],
+                child: Text(
+                  (comment.creatorName ?? 'U')[0].toUpperCase(),
+                  style: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  comment.creatorName ?? 'User',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 13),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Text(
+                _formatCommentTime(comment.createdAt),
+                style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            comment.content,
+            maxLines: 5,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 8),
+          Builder(
+            builder: (ctx) {
+              final currentEvent = event;
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (comment.createdBy == ctx.read<AuthProvider>().user?.id)
+                    GestureDetector(
+                      onTap: () => _deleteComment(currentEvent, comment),
+                      child: const Text('Delete',
+                          style: TextStyle(fontSize: 12, color: Colors.red)),
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatCommentTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final diff = now.difference(dateTime);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return DateFormat('MMM d').format(dateTime);
+  }
+
+  Future<void> _postComment(Event event) async {
+    if (_commentController.text.trim().isEmpty) return;
+
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+
+    final eventService = EventService();
+    final response = await eventService.addComment(
+      eventId: event.id,
+      content: _commentController.text.trim(),
+      token: token,
+    );
+
+    if (response.statusCode == 201) {
+      _commentController.clear();
+      if (mounted) {
+        context.read<EventsProvider>().getEventById(event.id);
+      }
+    }
+  }
+
+  Future<void> _deleteComment(Event event, Comment comment) async {
+    final token = context.read<AuthProvider>().token;
+    if (token == null) return;
+
+    final eventService = EventService();
+    final response = await eventService.deleteComment(
+      eventId: event.id,
+      commentId: comment.id,
+      token: token,
+    );
+
+    if (response.statusCode == 200) {
+      if (mounted) {
+        context.read<EventsProvider>().getEventById(event.id);
+      }
+    }
   }
 
   Widget _buildEventInfoCard(Event event) {
@@ -355,8 +1089,9 @@ return; // No location available
 
   Widget _buildQRCodeSection(Event event) {
     // Generate unique QR code data
-    final qrData = 'EVENT_REGISTRATION:${event.id}:${event.registrationId ?? DateTime.now().millisecondsSinceEpoch}';
-    
+    final qrData =
+        'EVENT_REGISTRATION:${event.id}:${event.registrationId ?? DateTime.now().millisecondsSinceEpoch}';
+
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -435,10 +1170,12 @@ return; // No location available
               ],
             ),
             const SizedBox(height: 16),
-            
+
             // Map
-            if (event.latitude != null && event.longitude != null &&
-                event.latitude != 0 && event.longitude != 0)
+            if (event.latitude != null &&
+                event.longitude != null &&
+                event.latitude != 0 &&
+                event.longitude != 0)
               Container(
                 height: 200,
                 decoration: BoxDecoration(
@@ -477,9 +1214,9 @@ return; // No location available
                   ),
                 ),
               ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Action buttons
             Row(
               children: [
@@ -492,9 +1229,9 @@ return; // No location available
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             // Public transit option
             SizedBox(
               width: double.infinity,
@@ -504,9 +1241,9 @@ return; // No location available
                 label: const Text('Find Public Transit Options'),
               ),
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             // Location details
             Container(
               padding: const EdgeInsets.all(12),
@@ -519,7 +1256,8 @@ return; // No location available
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                      const Icon(Icons.location_on,
+                          size: 16, color: Colors.grey),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -539,8 +1277,10 @@ return; // No location available
                       ),
                     ),
                   ],
-                  if (event.latitude != null && event.longitude != null &&
-                      event.latitude != 0 && event.longitude != 0) ...[
+                  if (event.latitude != null &&
+                      event.longitude != null &&
+                      event.latitude != 0 &&
+                      event.longitude != 0) ...[
                     const SizedBox(height: 4),
                     Padding(
                       padding: const EdgeInsets.only(left: 24),
@@ -567,7 +1307,7 @@ return; // No location available
     required String savedText,
   }) {
     final hasSavedContent = savedText.isNotEmpty;
-    
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -590,7 +1330,8 @@ return; // No location available
                 const Spacer(),
                 if (hasSavedContent)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.green.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
@@ -642,7 +1383,8 @@ return; // No location available
           children: [
             Row(
               children: [
-                Icon(Icons.directions_car, color: Theme.of(context).primaryColor),
+                Icon(Icons.directions_car,
+                    color: Theme.of(context).primaryColor),
                 const SizedBox(width: 8),
                 const Text(
                   'Choose Transportation',
@@ -815,11 +1557,13 @@ return; // No location available
                             children: [
                               Text(
                                 contact['name'] ?? '',
-                                style: const TextStyle(fontWeight: FontWeight.w500),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w500),
                               ),
                               Text(
                                 contact['phone'] ?? '',
-                                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                style: TextStyle(
+                                    fontSize: 12, color: Colors.grey[600]),
                               ),
                             ],
                           ),
@@ -944,7 +1688,8 @@ return; // No location available
                         if (event.address != null)
                           Text(
                             event.city,
-                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey[600]),
                           ),
                       ],
                     ),
@@ -968,7 +1713,9 @@ return; // No location available
                         const Icon(Icons.straighten, color: Colors.blue),
                         const SizedBox(height: 4),
                         Text(
-                          _estimatedDistance.isEmpty ? '--' : _estimatedDistance,
+                          _estimatedDistance.isEmpty
+                              ? '--'
+                              : _estimatedDistance,
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.blue,
@@ -1105,15 +1852,25 @@ return; // No location available
 
   Future<void> _addToGoogleCalendar(Event event) async {
     final title = Uri.encodeComponent(event.title);
-    final details = Uri.encodeComponent('Event: ${event.title}\nLocation: ${event.address ?? event.city}');
+    final details = Uri.encodeComponent(
+        'Event: ${event.title}\nLocation: ${event.address ?? event.city}');
     final location = Uri.encodeComponent('${event.address ?? event.city}');
-    final startTime = event.startTime.toUtc().toIso8601String().replaceAll('-', '').replaceAll(':', '').split('.')[0];
-    final endTime = event.endTime!.toUtc().toIso8601String().replaceAll('-', '').replaceAll(':', '').split('.')[0];
-    
+    final startTime = event.startTime
+        .toUtc()
+        .toIso8601String()
+        .replaceAll('-', '')
+        .replaceAll(':', '')
+        .split('.')[0];
+    final endTime = event.endTime!
+        .toUtc()
+        .toIso8601String()
+        .replaceAll('-', '')
+        .replaceAll(':', '')
+        .split('.')[0];
+
     final url = Uri.parse(
-      'https://calendar.google.com/calendar/render?action=TEMPLATE&text=$title&details=$details&location=$location&dates=$startTime/$endTime'
-    );
-    
+        'https://calendar.google.com/calendar/render?action=TEMPLATE&text=$title&details=$details&location=$location&dates=$startTime/$endTime');
+
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
@@ -1140,14 +1897,14 @@ ${_estimatedTime.isNotEmpty ? 'Estimated Time: $_estimatedTime' : ''}
 ''';
     Share.share(details, subject: 'Trip Details - ${event.title}');
   }
-  
+
   // Save contacts immediately when added
   Future<void> _saveContactsImmediately(Map<String, String> newContact) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final contactsJson = json.encode(_eventContacts);
       await prefs.setString('${_contactsKey}${widget.eventId}', contactsJson);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

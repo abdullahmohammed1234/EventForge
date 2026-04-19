@@ -3,7 +3,217 @@ const Group = require('../models/Group');
 const { Message, Conversation } = require('../models/Message');
 const mongoose = require('mongoose');
 
-// @desc    Get current user's groups
+// @desc    Get friends
+// @route   GET /api/friends
+// @access  Private
+const getFriends = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id).select('friends');
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    
+    const friends = await User.find({ _id: { $in: user.friends } })
+      .select('displayName avatarUrl city');
+    
+    res.json({ success: true, data: friends });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get friend requests
+// @route   GET /api/friends/requests
+// @access  Private
+const getFriendRequests = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id)
+      .populate('friendRequests', 'displayName avatarUrl city');
+    
+    res.json({ success: true, data: user.friendRequests || [] });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Send friend request
+// @route   POST /api/friends/request
+// @access  Private
+const sendFriendRequest = async (req, res, next) => {
+  try {
+    const { userId } = req.body;
+    const targetUser = await User.findById(userId);
+    
+    if (!targetUser) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    
+    // Check if already friends
+    if (targetUser.friends.includes(req.user.id)) {
+      return res.status(400).json({ success: false, error: 'Already friends' });
+    }
+    
+    // Add to target user's friend requests if not already there
+    if (!targetUser.friendRequests.includes(req.user.id)) {
+      targetUser.friendRequests.push(req.user.id);
+      await targetUser.save();
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Accept friend request
+// @route   POST /api/friends/request/accept
+// @access  Private
+const acceptFriendRequest = async (req, res, next) => {
+  try {
+    const { userId } = req.body;
+    const user = await User.findById(req.user.id);
+    const friendUser = await User.findById(userId);
+    
+    if (!friendUser) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    
+    // Add each other as friends
+    if (!user.friends.includes(userId)) {
+      user.friends.push(userId);
+    }
+    if (!friendUser.friends.includes(req.user.id)) {
+      friendUser.friends.push(req.user.id);
+    }
+    
+    // Remove from friend requests
+    user.friendRequests = user.friendRequests.filter(
+      id => id.toString() !== userId
+    );
+    
+    await Promise.all([user.save(), friendUser.save()]);
+    
+    res.json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Search users
+// @route   GET /api/friends/search
+// @access  Private
+const searchUsers = async (req, res, next) => {
+  try {
+    const { q } = req.query;
+    if (!q) {
+      return res.json({ success: true, data: [] });
+    }
+    
+    const user = await User.findById(req.user.id);
+    const friends = user.friends || [];
+    const requests = user.friendRequests || [];
+    
+    const users = await User.find({
+      _id: { $nin: [...friends, ...requests, req.user.id] },
+      $or: [
+        { displayName: { $regex: q, $options: 'i' } },
+        { email: { $regex: q, $options: 'i' } }
+      ]
+    }).select('displayName avatarUrl city').limit(20);
+    
+    res.json({ success: true, data: users });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get conversations
+// @route   GET /api/messages
+// @access  Private
+const getConversations = async (req, res, next) => {
+  try {
+    const userGroups = await Group.find({ 'members.user': req.user.id }).select('_id');
+    const groupIds = userGroups.map(g => g._id);
+    
+    const conversations = await Conversation.find({
+      $or: [
+        { participants: req.user.id },
+        { type: 'group', groupId: { $in: groupIds } },
+      ],
+    })
+      .populate('participants', 'displayName avatarUrl')
+      .populate('groupId', 'name')
+      .populate('lastMessage')
+      .sort({ updatedAt: -1 });
+    
+    res.json({ success: true, data: conversations });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get or create direct conversation
+// @route   POST /api/messages/conversation
+// @access  Private
+const getOrCreateConversation = async (req, res, next) => {
+  try {
+    const { userId } = req.body;
+    
+    let conversation = await Conversation.findOne({
+      type: 'direct',
+      participants: { $all: [req.user.id, userId] },
+    }).populate('participants', 'displayName avatarUrl');
+    
+    if (!conversation) {
+      conversation = await Conversation.create({
+        type: 'direct',
+        participants: [req.user.id, userId],
+      });
+      await conversation.populate('participants', 'displayName avatarUrl');
+    }
+    
+    res.json({ success: true, data: conversation });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get or create group conversation
+// @route   POST /api/messages/group/:groupId
+// @access  Private
+const getOrCreateGroupConversation = async (req, res, next) => {
+  try {
+    const { groupId } = req.params;
+    
+    const group = await Group.findById(groupId);
+    if (!group) {
+      return res.status(404).json({ success: false, error: 'Group not found' });
+    }
+    
+    const isMember = group.members.some(m => m.user.toString() === req.user.id);
+    if (!isMember) {
+      return res.status(403).json({ success: false, error: 'Not a member of this group' });
+    }
+    
+    let conversation = await Conversation.findOne({ groupId });
+    if (!conversation) {
+      conversation = await Conversation.create({
+        type: 'group',
+        participants: group.members.map(m => m.user),
+        groupId: group._id,
+      });
+    }
+    
+    await conversation.populate('participants', 'displayName avatarUrl');
+    await conversation.populate('groupId', 'name');
+    
+    res.json({ success: true, data: conversation });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get current user's groups (with user role)
 // @route   GET /api/groups
 // @access  Private
 const getMyGroups = async (req, res, next) => {
@@ -12,9 +222,19 @@ const getMyGroups = async (req, res, next) => {
       .populate('members.user', 'displayName avatarUrl')
       .sort({ updatedAt: -1 });
     
+    const groupsWithRole = groups.map(group => {
+      const currentUserMember = group.members.find(
+        m => m.user._id.toString() === req.user.id
+      );
+      const groupData = group.toObject();
+      groupData.isCurrentUserAdmin = currentUserMember?.role === 'admin';
+      groupData.userRole = currentUserMember?.role || 'none';
+      return groupData;
+    });
+    
     res.json({
       success: true,
-      data: groups,
+      data: groupsWithRole,
     });
   } catch (error) {
     next(error);
@@ -39,11 +259,19 @@ const createGroup = async (req, res, next) => {
       isPrivate: isPrivate || false,
     });
     
+    // Create a conversation for the group
+    const conversation = await Conversation.create({
+      type: 'group',
+      participants: [req.user.id],
+      groupId: group._id,
+    });
+    
     await group.populate('members.user', 'displayName avatarUrl');
     
     res.status(201).json({
       success: true,
       data: group,
+      conversationId: conversation._id,
     });
   } catch (error) {
     next(error);
@@ -55,19 +283,93 @@ const createGroup = async (req, res, next) => {
 // @access  Private
 const getGroup = async (req, res, next) => {
   try {
-    const group = await Group.findById(req.params.id)
+const group = await Group.findById(req.params.id)
       .populate('members.user', 'displayName avatarUrl');
     
-    if (!group) {
-      return res.status(404).json({
-        success: false,
-        error: 'Group not found',
-      });
-    }
+    // Add current user's admin status
+    const currentUserMember = group.members.find(
+      m => m.user._id.toString() === req.user.id
+    );
+    const isCurrentUserAdmin = currentUserMember?.role === 'admin';
+    
+    const groupData = group.toObject();
+    groupData.isCurrentUserAdmin = isCurrentUserAdmin;
+    groupData.userRole = currentUserMember?.role || 'none';
     
     res.json({
       success: true,
-      data: group,
+      data: groupData,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get all groups (with current user role)
+// @route   GET /api/groups
+// @access  Private
+const getMyGroupsWithRole = async (req, res, next) => {
+  try {
+    const groups = await Group.find({ 'members.user': req.user.id })
+      .populate('members.user', 'displayName avatarUrl')
+      .sort({ updatedAt: -1 });
+    
+    const groupsWithRole = groups.map(group => {
+      const currentUserMember = group.members.find(
+        m => m.user._id.toString() === req.user.id
+      );
+      const groupData = group.toObject();
+      groupData.isCurrentUserAdmin = currentUserMember?.role === 'admin';
+      groupData.userRole = currentUserMember?.role || 'none';
+      return groupData;
+    });
+    
+    res.json({
+      success: true,
+      data: groupsWithRole,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get discoverable (public) groups
+// @route   GET /api/groups/discover
+// @access  Private
+const discoverGroups = async (req, res, next) => {
+  try {
+    const { search = '', page = 1, limit = 20 } = req.query;
+    
+    // Get groups user is NOT a member of
+    const myGroupIds = await Group.find({ 'members.user': req.user.id }).select('_id');
+    const excludedIds = myGroupIds.map(g => g._id);
+    
+    const query = {
+      _id: { $nin: excludedIds },
+      isPrivate: false,
+    };
+    
+    if (search) {
+      query.name = { $regex: search, $options: 'i' };
+    }
+    
+    const groups = await Group.find(query)
+      .populate('members.user', 'displayName avatarUrl')
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit));
+    
+    const total = await Group.countDocuments(query);
+    
+    res.json({
+      success: true,
+      data: groups,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
     next(error);
@@ -108,38 +410,20 @@ const joinGroup = async (req, res, next) => {
     await group.save();
     await group.populate('members.user', 'displayName avatarUrl');
     
-    res.json({
-      success: true,
-      data: group,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Leave a group
-// @route   POST /api/groups/:id/leave
-// @access  Private
-const leaveGroup = async (req, res, next) => {
-  try {
-    const group = await Group.findById(req.params.id);
-    
-    if (!group) {
-      return res.status(404).json({
-        success: false,
-        error: 'Group not found',
+    // Create conversation for group
+    let conversation = await Conversation.findOne({ groupId: group._id });
+    if (!conversation) {
+      conversation = await Conversation.create({
+        type: 'group',
+        participants: group.members.map(m => m.user),
+        groupId: group._id,
       });
     }
     
-    group.members = group.members.filter(
-      member => member.user.toString() !== req.user.id
-    );
-    
-    await group.save();
-    
-    res.json({
+    res.status(201).json({
       success: true,
-      message: 'Left group successfully',
+      data: group,
+      conversationId: conversation._id,
     });
   } catch (error) {
     next(error);
@@ -200,308 +484,112 @@ const inviteUserToGroup = async (req, res, next) => {
   }
 };
 
-// @desc    Get friends list
-// @route   GET /api/friends
+// @desc    Leave a group
+// @route   POST /api/groups/:id/leave
 // @access  Private
-const getFriends = async (req, res, next) => {
+const leaveGroup = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id);
+    const group = await Group.findById(req.params.id);
     
-    const friends = await User.find({
-      _id: { $in: user.friends },
-    }).select('displayName avatarUrl city isActive');
-    
-    res.json({
-      success: true,
-      data: friends,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Get friend requests
-// @route   GET /api/friends/requests
-// @access  Private
-const getFriendRequests = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.user.id)
-      .populate('friendRequests.from', 'displayName avatarUrl city');
-    
-    const pendingRequests = user.friendRequests.filter(
-      req => req.status === 'pending'
-    );
-    
-    res.json({
-      success: true,
-      data: pendingRequests,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Send friend request
-// @route   POST /api/friends/request
-// @access  Private
-const sendFriendRequest = async (req, res, next) => {
-  try {
-    const { userId } = req.body;
-    
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        error: 'User ID is required',
-      });
-    }
-    
-    // Can't add yourself
-    if (userId === req.user.id) {
-      return res.status(400).json({
-        success: false,
-        error: 'Cannot add yourself',
-      });
-    }
-    
-    const targetUser = await User.findById(userId);
-    
-    if (!targetUser) {
+    if (!group) {
       return res.status(404).json({
         success: false,
-        error: 'User not found',
+        error: 'Group not found',
       });
     }
     
-    const currentUser = await User.findById(req.user.id);
-    
-    // Check if already friends
-    if (currentUser.friends.includes(userId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Already friends',
-      });
-    }
-    
-    // Check if request already sent
-    const existingRequest = targetUser.friendRequests.find(
-      req => req.from.toString() === req.user.id && req.status === 'pending'
+    const memberIndex = group.members.findIndex(
+      m => m.user.toString() === req.user.id
     );
     
-    if (existingRequest) {
+    if (memberIndex === -1) {
       return res.status(400).json({
         success: false,
-        error: 'Request already sent',
+        error: 'Not a member of this group',
       });
     }
     
-    targetUser.friendRequests.push({
-      from: req.user.id,
-      status: 'pending',
-    });
+    // Check if user is the last admin
+    if (group.members[memberIndex].role === 'admin') {
+      const adminCount = group.members.where(m => m.role === 'admin').length;
+      if (adminCount <= 1) {
+        return res.status(400).json({
+          success: false,
+          error: 'Cannot leave as the last admin. Assign another admin first.',
+        });
+      }
+    }
     
-    await targetUser.save();
+    group.members.splice(memberIndex, 1);
+    await group.save();
     
     res.json({
       success: true,
-      message: 'Friend request sent',
+      data: group,
     });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Accept friend request
-// @route   POST /api/friends/accept/:requestId
-// @access  Private
-const acceptFriendRequest = async (req, res, next) => {
+// @desc    Update member role (promote/demote)
+// @route   PUT /api/groups/:id/members/:userId/role
+// @access  Private (Admin only)
+const updateMemberRole = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id);
+    const { role } = req.body;
+    const { id: groupId, userId } = req.params;
     
-    const request = user.friendRequests.id(req.params.requestId);
-    
-    if (!request) {
+    const group = await Group.findById(groupId);
+    if (!group) {
       return res.status(404).json({
         success: false,
-        error: 'Request not found',
+        error: 'Group not found',
       });
     }
     
-    if (request.status !== 'pending') {
-      return res.status(400).json({
+    // Check if current user is admin
+    const currentUserIsAdmin = group.members.some(
+      m => m.user.toString() === req.user.id && m.role === 'admin'
+    );
+    
+    if (!currentUserIsAdmin) {
+      return res.status(403).json({
         success: false,
-        error: 'Request already processed',
+        error: 'Only admins can change roles',
       });
     }
     
-    // Add friends to both users
-    const requester = await User.findById(request.from);
+    // Find the member to update
+    const memberIndex = group.members.findIndex(
+      m => m.user.toString() === userId
+    );
     
-    user.friends.push(request.from);
-    requester.friends.push(user._id);
-    
-    request.status = 'accepted';
-    
-    await user.save();
-    await requester.save();
-    
-    res.json({
-      success: true,
-      message: 'Friend request accepted',
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Get user by search
-// @route   GET /api/friends/search
-// @access  Private
-const searchUsers = async (req, res, next) => {
-  try {
-    const { q } = req.query;
-    
-    if (!q || q.length < 2) {
-      return res.status(400).json({
+    if (memberIndex === -1) {
+      return res.status(404).json({
         success: false,
-        error: 'Search query must be at least 2 characters',
+        error: 'Member not found in group',
       });
     }
     
-    const currentUser = await User.findById(req.user.id);
+    // Cannot demote the last admin
+    if (role !== 'admin') {
+      const adminCount = group.members.where(m => m.role === 'admin').length;
+      if (adminCount <= 1 && group.members[memberIndex].role === 'admin') {
+        return res.status(400).json({
+          success: false,
+          error: 'Cannot demote the last admin',
+        });
+      }
+    }
     
-    // Search by name or email
-    const users = await User.find({
-      $and: [
-        { _id: { $ne: req.user.id } },
-        { _id: { $nin: currentUser.friends } },
-        {
-          $or: [
-            { displayName: { $regex: q, $options: 'i' } },
-            { email: { $regex: q, $options: 'i' } },
-          ],
-        },
-      ],
-    }).select('displayName avatarUrl email city').limit(20);
+    group.members[memberIndex].role = role;
+    await group.save();
+    await group.populate('members.user', 'displayName avatarUrl');
     
     res.json({
       success: true,
-      data: users,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Get friend suggestions
-// @route   GET /api/friends/suggestions
-// @access  Private
-const getSuggestions = async (req, res, next) => {
-  try {
-    const currentUser = await User.findById(req.user.id);
-    
-    // Get user's friends
-    const userFriends = currentUser.friends;
-    
-    // Find users who are friends of friends (friends of friends)
-    let suggestions = [];
-    
-    // Get friends of friends
-    if (userFriends.length > 0) {
-      const friendOfFriends = await User.aggregate([
-        { $match: { _id: { $in: userFriends } } },
-        { $unwind: '$friends' },
-        { $group: { _id: '$friends' } },
-        { $match: { _id: { $nin: [...userFriends, req.user.id] } } },
-        { $limit: 10 }
-      ]);
-      
-      const friendIds = friendOfFriends.map(f => f._id);
-      suggestions = await User.find({ _id: { $in: friendIds } })
-        .select('displayName avatarUrl city');
-    }
-    
-    // If not enough suggestions, add users from same city
-    if (suggestions.length < 5 && currentUser.city) {
-      const citySuggestions = await User.find({
-        _id: { $nin: [...userFriends, req.user.id, ...suggestions.map(s => s._id)] },
-        city: currentUser.city,
-      }).select('displayName avatarUrl city').limit(10 - suggestions.length);
-      
-      suggestions = [...suggestions, ...citySuggestions];
-    }
-    
-    // If still not enough, add random active users
-    if (suggestions.length < 5) {
-      const randomSuggestions = await User.find({
-        _id: { $nin: [...userFriends, req.user.id, ...suggestions.map(s => s._id)] },
-        isActive: true,
-      }).select('displayName avatarUrl city').limit(5 - suggestions.length);
-      
-      suggestions = [...suggestions, ...randomSuggestions];
-    }
-    
-    res.json({
-      success: true,
-      data: suggestions,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Get conversations
-// @route   GET /api/messages
-// @access  Private
-const getConversations = async (req, res, next) => {
-  try {
-    const conversations = await Conversation.find({
-      participants: req.user.id,
-    })
-      .populate('participants', 'displayName avatarUrl')
-      .populate('lastMessage')
-      .sort({ lastMessageAt: -1 });
-    
-    res.json({
-      success: true,
-      data: conversations,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Get or create direct conversation
-// @route   POST /api/messages/conversation
-// @access  Private
-const getOrCreateConversation = async (req, res, next) => {
-  try {
-    const { userId } = req.body;
-    
-    if (!userId) {
-      return res.status(400).json({
-        success: false,
-        error: 'User ID is required',
-      });
-    }
-    
-    // Find existing conversation
-    let conversation = await Conversation.findOne({
-      type: 'direct',
-      participants: { $all: [req.user.id, userId] },
-    }).populate('participants', 'displayName avatarUrl');
-    
-    if (!conversation) {
-      // Create new conversation
-      conversation = await Conversation.create({
-        type: 'direct',
-        participants: [req.user.id, userId],
-      });
-      await conversation.populate('participants', 'displayName avatarUrl');
-    }
-    
-    res.json({
-      success: true,
-      data: conversation,
+      data: group,
     });
   } catch (error) {
     next(error);
@@ -572,8 +660,18 @@ const sendMessage = async (req, res, next) => {
       });
     }
     
-    // Check if user is participant
-    if (!conversation.participants.includes(req.user.id)) {
+    // Check if user is participant OR member of the group
+    let isAuthorized = conversation.participants.includes(req.user.id);
+    
+    // For group conversations, check if user is a member of the group
+    if (!isAuthorized && conversation.type === 'group' && conversation.groupId) {
+      const group = await Group.findById(conversation.groupId);
+      if (group) {
+        isAuthorized = group.members.some(m => m.user.toString() === req.user.id);
+      }
+    }
+    
+    if (!isAuthorized) {
       return res.status(403).json({
         success: false,
         error: 'Not authorized',
@@ -608,9 +706,11 @@ module.exports = {
   getMyGroups,
   createGroup,
   getGroup,
+  discoverGroups,
   joinGroup,
   leaveGroup,
   inviteUserToGroup,
+  updateMemberRole,
   getFriends,
   getFriendRequests,
   sendFriendRequest,
@@ -618,6 +718,7 @@ module.exports = {
   searchUsers,
   getConversations,
   getOrCreateConversation,
+  getOrCreateGroupConversation,
   getMessages,
   sendMessage,
 };

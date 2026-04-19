@@ -7,6 +7,7 @@
       "name": "event_planner",
       "version": "1.0.0+1",
       "dependencies": [
+        "add_2_calendar",
         "cached_network_image",
         "dio",
         "flutter",
@@ -70,6 +71,13 @@
         "stream_channel",
         "test_api",
         "vector_math"
+      ]
+    },
+    {
+      "name": "add_2_calendar",
+      "version": "3.0.1",
+      "dependencies": [
+        "flutter"
       ]
     },
     {
