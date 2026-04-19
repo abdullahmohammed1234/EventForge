@@ -5,10 +5,29 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="dc0fd7b4-1fe4-438a-93e6-e470ace67a94" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/event_planner/lib/features/auth/auth_provider.dart" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/lib/features/auth/auth_provider.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/event_planner/lib/features/profile/profile_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/lib/features/profile/profile_screen.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/event_planner/lib/main.dart" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/lib/main.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/event_planner/.dart_tool/package_config.json" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/.dart_tool/package_config.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/event_planner/.dart_tool/version" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/.dart_tool/version" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/event_planner/.flutter-plugins-dependencies" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/.flutter-plugins-dependencies" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/event_planner/android/local.properties" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/android/local.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/event_planner/build/native_hooks/.last_build_id" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/build/native_hooks/.last_build_id" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/event_planner/linux/flutter/ephemeral/.plugin_symlinks/file_selector_linux" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/linux/flutter/ephemeral/.plugin_symlinks/file_selector_linux" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/event_planner/linux/flutter/ephemeral/.plugin_symlinks/flutter_local_notifications_linux" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/linux/flutter/ephemeral/.plugin_symlinks/flutter_local_notifications_linux" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/event_planner/linux/flutter/ephemeral/.plugin_symlinks/flutter_secure_storage_linux" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/linux/flutter/ephemeral/.plugin_symlinks/flutter_secure_storage_linux" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/event_planner/linux/flutter/ephemeral/.plugin_symlinks/image_picker_linux" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/linux/flutter/ephemeral/.plugin_symlinks/image_picker_linux" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/event_planner/linux/flutter/ephemeral/.plugin_symlinks/path_provider_linux" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/linux/flutter/ephemeral/.plugin_symlinks/path_provider_linux" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/event_planner/linux/flutter/ephemeral/.plugin_symlinks/share_plus" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/linux/flutter/ephemeral/.plugin_symlinks/share_plus" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/event_planner/linux/flutter/ephemeral/.plugin_symlinks/shared_preferences_linux" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/linux/flutter/ephemeral/.plugin_symlinks/shared_preferences_linux" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/event_planner/linux/flutter/ephemeral/.plugin_symlinks/url_launcher_linux" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/linux/flutter/ephemeral/.plugin_symlinks/url_launcher_linux" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/event_planner/windows/flutter/ephemeral/.plugin_symlinks/file_selector_windows" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/windows/flutter/ephemeral/.plugin_symlinks/file_selector_windows" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/event_planner/windows/flutter/ephemeral/.plugin_symlinks/flutter_secure_storage_windows" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/windows/flutter/ephemeral/.plugin_symlinks/flutter_secure_storage_windows" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/event_planner/windows/flutter/ephemeral/.plugin_symlinks/image_picker_windows" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/windows/flutter/ephemeral/.plugin_symlinks/image_picker_windows" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/event_planner/windows/flutter/ephemeral/.plugin_symlinks/path_provider_windows" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/windows/flutter/ephemeral/.plugin_symlinks/path_provider_windows" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/event_planner/windows/flutter/ephemeral/.plugin_symlinks/share_plus" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/windows/flutter/ephemeral/.plugin_symlinks/share_plus" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/event_planner/windows/flutter/ephemeral/.plugin_symlinks/shared_preferences_windows" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/windows/flutter/ephemeral/.plugin_symlinks/shared_preferences_windows" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/event_planner/windows/flutter/ephemeral/.plugin_symlinks/url_launcher_windows" beforeDir="false" afterPath="$PROJECT_DIR$/event_planner/windows/flutter/ephemeral/.plugin_symlinks/url_launcher_windows" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -29,20 +48,20 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
-    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
-    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;michelle&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/michellezhu/Desktop/Event-Planner-App&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;AndroidSdkUpdater&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.readMode.enableVisualFormatting": "true",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "/Users/michellezhu/Desktop/EventForge",
+    "settings.editor.selected.configurable": "AndroidSdkUpdater"
   }
-}</component>
+}]]></component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
       <changelist id="dc0fd7b4-1fe4-438a-93e6-e470ace67a94" name="Changes" comment="" />

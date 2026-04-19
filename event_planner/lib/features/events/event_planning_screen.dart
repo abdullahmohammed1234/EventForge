@@ -1441,12 +1441,22 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
     final isSelected = _selectedTransportation == value;
     return GestureDetector(
       onTap: () {
-        setState(() {
-          _selectedTransportation = value;
-        });
-        // Update the transportation plan
-        _transportationController.text = label;
-      },
+  setState(() {
+    _selectedTransportation = value;
+    _transportationController.text = label;
+
+    if (value == 'car') {
+      _estimatedDistance = '14.2 km';
+      _estimatedTime = '22 min';
+    } else if (value == 'transit') {
+      _estimatedDistance = '14.2 km';
+      _estimatedTime = '41 min';
+    } else if (value == 'bike') {
+      _estimatedDistance = '12.8 km';
+      _estimatedTime = '55 min';
+    }
+  });
+},
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(

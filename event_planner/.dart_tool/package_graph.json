@@ -74,6 +74,13 @@
       ]
     },
     {
+      "name": "add_2_calendar",
+      "version": "3.0.1",
+      "dependencies": [
+        "flutter"
+      ]
+    },
+    {
       "name": "palette_generator",
       "version": "0.3.3+7",
       "dependencies": [
@@ -1344,13 +1351,6 @@
         "file",
         "path",
         "string_scanner"
-      ]
-    },
-    {
-      "name": "add_2_calendar",
-      "version": "3.0.1",
-      "dependencies": [
-        "flutter"
       ]
     }
   ],
