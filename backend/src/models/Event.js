@@ -1,5 +1,108 @@
 const mongoose = require('mongoose');
 
+// To-do item schema for collaborative planning
+const todoItemSchema = new mongoose.Schema(
+  {
+    title: {
+      type: String,
+      required: [true, 'To-do title is required'],
+      trim: true,
+      maxlength: [200, 'Title cannot exceed 200 characters'],
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Description cannot exceed 500 characters'],
+    },
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    isCompleted: {
+      type: Boolean,
+      default: false,
+    },
+    completedAt: {
+      type: Date,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+  },
+  { timestamps: true }
+);
+
+// Poll schema for group decisions
+const pollSchema = new mongoose.Schema(
+  {
+    question: {
+      type: String,
+      required: [true, 'Poll question is required'],
+      trim: true,
+      maxlength: [300, 'Question cannot exceed 300 characters'],
+    },
+    options: [{
+      text: {
+        type: String,
+        required: true,
+        trim: true,
+        maxlength: [200, 'Option text cannot exceed 200 characters'],
+      },
+      votes: [{
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+        },
+        votedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      }],
+    }],
+    isMultipleChoice: {
+      type: Boolean,
+      default: false,
+    },
+    allowsNewOptions: {
+      type: Boolean,
+      default: true,
+    },
+    expiresAt: {
+      type: Date,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+  },
+  { timestamps: true }
+);
+
+// Comment schema for event discussions
+const commentSchema = new mongoose.Schema(
+  {
+    content: {
+      type: String,
+      required: [true, 'Comment content is required'],
+      trim: true,
+      maxlength: [1000, 'Comment cannot exceed 1000 characters'],
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+  },
+  { timestamps: true }
+);
+
 // Sub-event schema for LettuceMeet-style scheduling
 const subEventSchema = new mongoose.Schema(
   {
@@ -205,6 +308,9 @@ const eventSchema = new mongoose.Schema(
       min: 0,
       default: null,
     },
+    todoItems: [todoItemSchema],
+    polls: [pollSchema],
+    comments: [commentSchema],
   },
   {
     timestamps: true,

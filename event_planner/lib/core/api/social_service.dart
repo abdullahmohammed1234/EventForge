@@ -60,6 +60,25 @@ class SocialService {
     }
   }
 
+  Future<http.Response> discoverGroups(String token,
+      {String search = '', int page = 1}) async {
+    try {
+      var url = '$baseUrl${Endpoints.groups}/discover?page=$page';
+      if (search.isNotEmpty) {
+        url += '&search=${Uri.encodeComponent(search)}';
+      }
+      final response = await _client
+          .get(
+            Uri.parse(url),
+            headers: _authHeaders(token),
+          )
+          .timeout(const Duration(seconds: 15));
+      return response;
+    } catch (e) {
+      throw Exception('Connection failed: $e');
+    }
+  }
+
   Future<http.Response> joinGroup(String token, String groupId) async {
     try {
       final response = await _client
@@ -96,6 +115,23 @@ class SocialService {
             Uri.parse('$baseUrl${Endpoints.groups}/$groupId/invite'),
             headers: _authHeaders(token),
             body: jsonEncode({'userId': userId}),
+          )
+          .timeout(const Duration(seconds: 15));
+      return response;
+    } catch (e) {
+      throw Exception('Connection failed: $e');
+    }
+  }
+
+  Future<http.Response> updateMemberRole(
+      String token, String groupId, String userId, String role) async {
+    try {
+      final response = await _client
+          .put(
+            Uri.parse(
+                '$baseUrl${Endpoints.groups}/$groupId/members/$userId/role'),
+            headers: _authHeaders(token),
+            body: jsonEncode({'role': role}),
           )
           .timeout(const Duration(seconds: 15));
       return response;
@@ -228,6 +264,21 @@ class SocialService {
             Uri.parse('$baseUrl${Endpoints.messagesConversation}'),
             headers: _authHeaders(token),
             body: jsonEncode({'userId': userId}),
+          )
+          .timeout(const Duration(seconds: 15));
+      return response;
+    } catch (e) {
+      throw Exception('Connection failed: $e');
+    }
+  }
+
+  Future<http.Response> getOrCreateGroupConversation(
+      String token, String groupId) async {
+    try {
+      final response = await _client
+          .post(
+            Uri.parse('$baseUrl${Endpoints.messagesGroup(groupId)}'),
+            headers: _authHeaders(token),
           )
           .timeout(const Duration(seconds: 15));
       return response;

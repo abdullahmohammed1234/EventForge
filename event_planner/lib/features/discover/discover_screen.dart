@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../events/events_provider.dart';
-import 'widgets/discover_header.dart';
-import 'widgets/category_item.dart';
-import '../../core/config/app_config.dart';
+// import 'widgets/discover_header.dart';
+// import 'widgets/category_item.dart';
+// import '../../core/config/app_config.dart';
+import 'package:go_router/go_router.dart';
+import '../events/events_feed_screen.dart';
 
 /// Discover screen with custom header and event filtering
 class DiscoverScreen extends StatefulWidget {
@@ -14,17 +16,21 @@ class DiscoverScreen extends StatefulWidget {
 }
 
 class _DiscoverScreenState extends State<DiscoverScreen> {
-  int _selectedCategoryIndex = 0;
+  String _capitalize(String text) {
+    if (text.isEmpty) return text;
+    return text[0].toUpperCase() + text.substring(1);
+  }
+  //int _selectedCategoryIndex = 0;
 
-  final List<CategoryData> _categories = const [
-    CategoryData(label: 'All', icon: Icons.apps),
-    CategoryData(label: 'Music', icon: Icons.music_note),
-    CategoryData(label: 'Food', icon: Icons.restaurant),
-    CategoryData(label: 'Sports', icon: Icons.sports_basketball),
-    CategoryData(label: 'Arts', icon: Icons.palette),
-    CategoryData(label: 'Tech', icon: Icons.computer),
-    CategoryData(label: 'Social', icon: Icons.people),
-  ];
+  // final List<CategoryData> _categories = const [
+  //   CategoryData(label: 'All', icon: Icons.apps),
+  //   CategoryData(label: 'Music', icon: Icons.music_note),
+  //   CategoryData(label: 'Food', icon: Icons.restaurant),
+  //   CategoryData(label: 'Sports', icon: Icons.sports_basketball),
+  //   CategoryData(label: 'Arts', icon: Icons.palette),
+  //   CategoryData(label: 'Tech', icon: Icons.computer),
+  //   CategoryData(label: 'Social', icon: Icons.people),
+  // ];
 
   @override
   void initState() {
@@ -35,78 +41,114 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     });
   }
 
-  void _onCategorySelected(int index) {
-    setState(() {
-      _selectedCategoryIndex = index;
-    });
-    // TODO: Filter events based on selected category
-  }
+  // void _onCategorySelected(int index) {
+  //   setState(() {
+  //     _selectedCategoryIndex = index;
+  //   });
+  // }
 
   @override
   Widget build(BuildContext context) {
+    final uri = GoRouterState.of(context).uri;
+    final cityFilter = uri.queryParameters['city'];
+    final typeFilter = uri.queryParameters['type'];
+    final categoryFilter = uri.queryParameters['category'];
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: Column(
         children: [
           // Custom Discover Header
-          const DiscoverHeader(),
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 16, 12),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () {
+                      context.pop(); // go back
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      (cityFilter != null && cityFilter.isNotEmpty)
+                          ? "Events in $cityFilter"
+                          : typeFilter == 'popular'
+                              ? (categoryFilter != null &&
+                                      categoryFilter.isNotEmpty
+                                  ? "Popular ${_capitalize(categoryFilter)} Events"
+                                  : "Popular Events")
+                              : "Discover Events",
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 12),
           // Category List
-          const SizedBox(height: 12),
-          CategoryList(
-            categories: _categories,
-            selectedIndex: _selectedCategoryIndex,
-            onCategorySelected: _onCategorySelected,
-          ),
 
           const SizedBox(height: 12),
 
           // Events List
           Expanded(
-            child: _buildEventsList(),
+            child: _buildEventsList(cityFilter, typeFilter, categoryFilter),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildEventsList() {
+  Widget _buildEventsList(
+    String? cityFilter,
+    String? typeFilter,
+    String? categoryFilter,
+  ) {
     return Consumer<EventsProvider>(
       builder: (context, eventsProvider, child) {
-        if (eventsProvider.isLoading && eventsProvider.events.isEmpty) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
+        final allEvents = eventsProvider.events;
+
+        // Start with all events
+        List<Event> filtered = allEvents;
+
+        // Filter by city
+        if (cityFilter != null && cityFilter.isNotEmpty) {
+          filtered = filtered.where((e) {
+            return (e.city ?? '')
+                .toLowerCase()
+                .contains(cityFilter.toLowerCase());
+          }).toList();
         }
 
-        if (eventsProvider.events.isEmpty) {
+        // Category filter
+        if (categoryFilter != null && categoryFilter.isNotEmpty) {
+          filtered =
+              filtered.where((e) => e.category == categoryFilter).toList();
+        }
+
+        // Popular
+        if (typeFilter == 'popular') {
+          filtered = filtered;
+        }
+
+        // Loading state
+        if (eventsProvider.isLoading && allEvents.isEmpty) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        // Empty state AFTER filtering
+        if (filtered.isEmpty) {
           return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.event_busy,
-                  size: 64,
-                  color: Colors.grey[400],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'No events found',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Try changing your location or category',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[500],
-                  ),
-                ),
-              ],
+            child: Text(
+              'No events match your filters',
+              style: TextStyle(color: Colors.grey[600]),
             ),
           );
         }
@@ -115,48 +157,16 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           onRefresh: () => eventsProvider.fetchEvents(refresh: true),
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: eventsProvider.events.length,
+            itemCount: filtered.length,
             itemBuilder: (context, index) {
-              final event = eventsProvider.events[index];
-              return ListTile(
-                leading: event.coverImageUrl != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          AppConfig.getFullUrl(event.coverImageUrl),
-                          width: 56,
-                          height: 56,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            width: 56,
-                            height: 56,
-                            color: Colors.grey[200],
-                            child: const Icon(Icons.event),
-                          ),
-                        ),
-                      )
-                    : Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(Icons.event),
-                      ),
-                title: Text(
-                  event.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              final event = filtered[index];
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: EventCard(
+                  event: event,
+                  isHorizontal: false, // vertical card
                 ),
-                subtitle: Text(
-                  event.description ?? '',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                onTap: () {
-                  // Navigate to event details
-                },
               );
             },
           ),

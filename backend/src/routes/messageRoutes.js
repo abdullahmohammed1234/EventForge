@@ -20,6 +20,13 @@ router.get('/', auth, asyncWrapper(socialController.getConversations));
 router.post('/conversation', auth, asyncWrapper(socialController.getOrCreateConversation));
 
 /**
+ * @desc    Get or create group conversation
+ * @route   POST /api/messages/group/:groupId
+ * @access  Private
+ */
+router.post('/group/:groupId', auth, asyncWrapper(socialController.getOrCreateGroupConversation));
+
+/**
  * @desc    Get messages in conversation
  * @route   GET /api/messages/:conversationId
  * @access  Private

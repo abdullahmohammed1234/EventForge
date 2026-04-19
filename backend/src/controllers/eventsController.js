@@ -702,6 +702,341 @@ uploadEventCover = asyncWrapper(async (req, res, next) => {
   });
 });
 
+const getEventCalendar = asyncWrapper(async (req, res, next) => {
+  const event = await Event.findById(req.params.id);
+
+  if (!event) {
+    return next(new APIError('Event not found', 404));
+  }
+
+  const formatDate = (date) => {
+    if (!date) return '';
+    return new Date(date).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  };
+
+  const uid = event._id.toString();
+  const dtstamp = formatDate(new Date());
+  const dtstart = formatDate(event.startTime);
+  const dtend = formatDate(event.endTime);
+  
+  let ical = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//StormForge 2026//Event Planner//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:${uid}@stormforge2026
+DTSTAMP:${dtstamp}
+DTSTART:${dtstart}
+DTEND:${dtend}
+SUMMARY:${event.title}
+DESCRIPTION:${(event.description || '').replace(/\n/g, '\\n')}
+LOCATION:${event.address || ''}
+END:VEVENT
+END:VCALENDAR`;
+
+  res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${event.title.replace(/[^a-z0-9]/gi, '_')}.ics"`);
+  res.send(ical);
+});
+
+const addTodoItem = asyncWrapper(async (req, res, next) => {
+  const event = await Event.findById(req.params.id);
+
+  if (!event) {
+    return next(new APIError('Event not found', 404));
+  }
+
+  const { title, description, assignedTo } = req.body;
+
+  if (!title || !title.trim()) {
+    return next(new APIError('To-do title is required', 400));
+  }
+
+  const todoItem = {
+    title: title.trim(),
+    description: description?.trim(),
+    assignedTo: assignedTo || null,
+    createdBy: req.userId,
+  };
+
+  event.todoItems.push(todoItem);
+  await event.save();
+
+  res.status(201).json({
+    success: true,
+    message: 'To-do item added',
+    data: { todoItem: event.todoItems[event.todoItems.length - 1] },
+  });
+});
+
+const updateTodoItem = asyncWrapper(async (req, res, next) => {
+  const event = await Event.findById(req.params.id);
+
+  if (!event) {
+    return next(new APIError('Event not found', 404));
+  }
+
+  const todoItem = event.todoItems.id(req.params.todoId);
+
+  if (!todoItem) {
+    return next(new APIError('To-do item not found', 404));
+  }
+
+  const { title, description, assignedTo, isCompleted } = req.body;
+
+  if (title !== undefined) todoItem.title = title.trim();
+  if (description !== undefined) todoItem.description = description?.trim();
+  if (assignedTo !== undefined) todoItem.assignedTo = assignedTo;
+  if (isCompleted !== undefined) {
+    todoItem.isCompleted = isCompleted;
+    todoItem.completedAt = isCompleted ? new Date() : null;
+  }
+
+  await event.save();
+
+  res.json({
+    success: true,
+    message: 'To-do item updated',
+    data: { todoItem },
+  });
+});
+
+const deleteTodoItem = asyncWrapper(async (req, res, next) => {
+  const event = await Event.findById(req.params.id);
+
+  if (!event) {
+    return next(new APIError('Event not found', 404));
+  }
+
+  const todoItem = event.todoItems.id(req.params.todoId);
+
+  if (!todoItem) {
+    return next(new APIError('To-do item not found', 404));
+  }
+
+  todoItem.deleteOne();
+  await event.save();
+
+  res.json({
+    success: true,
+    message: 'To-do item deleted',
+  });
+});
+
+const addPoll = asyncWrapper(async (req, res, next) => {
+  const event = await Event.findById(req.params.id);
+
+  if (!event) {
+    return next(new APIError('Event not found', 404));
+  }
+
+  const { question, options, isMultipleChoice, allowsNewOptions, expiresAt } = req.body;
+
+  if (!question || !question.trim()) {
+    return next(new APIError('Poll question is required', 400));
+  }
+
+  if (!options || !Array.isArray(options) || options.length < 2) {
+    return next(new APIError('At least 2 options are required', 400));
+  }
+
+  const pollOptions = options.map(opt => ({
+    text: opt.text || opt,
+    votes: [],
+  }));
+
+  const poll = {
+    question: question.trim(),
+    options: pollOptions,
+    isMultipleChoice: isMultipleChoice || false,
+    allowsNewOptions: allowsNewOptions !== false,
+    expiresAt: expiresAt ? new Date(expiresAt) : null,
+    createdBy: req.userId,
+  };
+
+  event.polls.push(poll);
+  await event.save();
+
+  res.status(201).json({
+    success: true,
+    message: 'Poll created',
+    data: { poll: event.polls[event.polls.length - 1] },
+  });
+});
+
+const voteOnPoll = asyncWrapper(async (req, res, next) => {
+  const event = await Event.findById(req.params.id);
+
+  if (!event) {
+    return next(new APIError('Event not found', 404));
+  }
+
+  const poll = event.polls.id(req.params.pollId);
+
+  if (!poll) {
+    return next(new APIError('Poll not found', 404));
+  }
+
+  if (!poll.isActive) {
+    return next(new APIError('Poll is closed', 400));
+  }
+
+  if (poll.expiresAt && new Date(poll.expiresAt) < new Date()) {
+    poll.isActive = false;
+    await event.save();
+    return next(new APIError('Poll has expired', 400));
+  }
+
+  const { optionIndex, optionText } = req.body;
+
+  if (!poll.isMultipleChoice) {
+    poll.options.forEach(opt => {
+      opt.votes = opt.votes.filter(v => v.user.toString() !== req.userId.toString());
+    });
+  }
+
+  if (optionIndex !== undefined && poll.options[optionIndex]) {
+    const alreadyVoted = poll.options[optionIndex].votes.some(
+      v => v.user.toString() === req.userId.toString()
+    );
+    if (!alreadyVoted) {
+      poll.options[optionIndex].votes.push({ user: req.userId });
+    }
+  }
+
+  if (optionText && poll.allowsNewOptions) {
+    let existingOption = poll.options.find(
+      o => o.text.toLowerCase() === optionText.toLowerCase()
+    );
+    if (!existingOption) {
+      poll.options.push({ text: optionText, votes: [{ user: req.userId }] });
+    } else {
+      const alreadyVoted = existingOption.votes.some(
+        v => v.user.toString() === req.userId.toString()
+      );
+      if (!alreadyVoted) {
+        existingOption.votes.push({ user: req.userId });
+      }
+    }
+  }
+
+  await event.save();
+
+  res.json({
+    success: true,
+    message: 'Vote recorded',
+    data: { poll },
+  });
+});
+
+const closePoll = asyncWrapper(async (req, res, next) => {
+  const event = await Event.findById(req.params.id);
+
+  if (!event) {
+    return next(new APIError('Event not found', 404));
+  }
+
+  const poll = event.polls.id(req.params.pollId);
+
+  if (!poll) {
+    return next(new APIError('Poll not found', 404));
+  }
+
+  if (event.createdBy.toString() !== req.userId.toString()) {
+    return next(new APIError('Only event organizer can close polls', 403));
+  }
+
+  poll.isActive = false;
+  await event.save();
+
+  res.json({
+    success: true,
+    message: 'Poll closed',
+    data: { poll },
+  });
+});
+
+const deletePoll = asyncWrapper(async (req, res, next) => {
+  const event = await Event.findById(req.params.id);
+
+  if (!event) {
+    return next(new APIError('Event not found', 404));
+  }
+
+  const poll = event.polls.id(req.params.pollId);
+
+  if (!poll) {
+    return next(new APIError('Poll not found', 404));
+  }
+
+  if (poll.createdBy.toString() !== req.userId.toString()) {
+    return next(new APIError('Only poll creator can delete poll', 403));
+  }
+
+  poll.deleteOne();
+  await event.save();
+
+  res.json({
+    success: true,
+    message: 'Poll deleted',
+  });
+});
+
+const addComment = asyncWrapper(async (req, res, next) => {
+  const event = await Event.findById(req.params.id);
+
+  if (!event) {
+    return next(new APIError('Event not found', 404));
+  }
+
+  const { content } = req.body;
+
+  if (!content || !content.trim()) {
+    return next(new APIError('Comment content is required', 400));
+  }
+
+  const comment = {
+    content: content.trim(),
+    createdBy: req.userId,
+  };
+
+  event.comments.push(comment);
+  await event.save();
+
+  res.status(201).json({
+    success: true,
+    message: 'Comment added',
+    data: { comment: event.comments[event.comments.length - 1] },
+  });
+});
+
+const deleteComment = asyncWrapper(async (req, res, next) => {
+  const event = await Event.findById(req.params.id);
+
+  if (!event) {
+    return next(new APIError('Event not found', 404));
+  }
+
+  const comment = event.comments.id(req.params.commentId);
+
+  if (!comment) {
+    return next(new APIError('Comment not found', 404));
+  }
+
+  if (comment.createdBy.toString() !== req.userId.toString()) {
+    return next(new APIError('Only comment author can delete comment', 403));
+  }
+
+  comment.deleteOne();
+  await event.save();
+
+  res.json({
+    success: true,
+    message: 'Comment deleted',
+  });
+});
+
 module.exports = {
   getEvents,
   getEvent,
@@ -716,4 +1051,14 @@ module.exports = {
   unsaveEvent,
   getSavedEvents,
   uploadEventCover,
+  getEventCalendar,
+  addTodoItem,
+  updateTodoItem,
+  deleteTodoItem,
+  addPoll,
+  voteOnPoll,
+  closePoll,
+  deletePoll,
+  addComment,
+  deleteComment,
 };

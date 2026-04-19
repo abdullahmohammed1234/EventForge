@@ -9,13 +9,11 @@ import 'dart:io';
 
 import 'core/api/auth_service.dart';
 import 'core/api/event_service.dart';
-import 'core/api/social_service.dart';
 import 'core/utils/storage_helper.dart';
 import 'core/services/push_notification_service.dart';
 import 'features/auth/auth_provider.dart';
 import 'features/events/events_provider.dart';
 import 'features/notifications/notifications_provider.dart';
-import 'features/groups/social_provider.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/register_screen.dart';
 import 'features/auth/splash_screen.dart';
@@ -30,7 +28,10 @@ import 'features/search/search_screen.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/safety/safety_center_screen.dart';
 import 'features/notifications/notifications_screen.dart';
+import 'features/discover/discover_screen.dart';
+import 'features/groups/social_provider.dart';
 import 'features/messages/messages_screen.dart';
+import 'core/api/social_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -205,7 +206,7 @@ class EventPlannerApp extends StatelessWidget {
       GoRoute(
         path: '/search',
         name: 'search',
-        builder: (context, state) => const SearchScreen(),
+        builder: (context, state) => const DiscoverScreen(),
       ),
       GoRoute(
         path: '/my-events',

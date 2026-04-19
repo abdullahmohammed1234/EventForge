@@ -5,13 +5,43 @@ import 'package:provider/provider.dart';
 import '../../core/api/social_service.dart';
 import '../auth/auth_provider.dart';
 
+class GroupMember {
+  final String id;
+  final String displayName;
+  final String? avatarUrl;
+  final String role;
+  final DateTime? joinedAt;
+
+  GroupMember({
+    required this.id,
+    required this.displayName,
+    this.avatarUrl,
+    this.role = 'member',
+    this.joinedAt,
+  });
+
+  factory GroupMember.fromJson(Map<String, dynamic> json) {
+    final user = json['user'] is Map ? json['user'] : json;
+    return GroupMember(
+      id: user['id'] ?? user['_id'] ?? '',
+      displayName: user['displayName'] ?? 'Unknown',
+      avatarUrl: user['avatarUrl'],
+      role: json['role'] ?? 'member',
+      joinedAt:
+          json['joinedAt'] != null ? DateTime.parse(json['joinedAt']) : null,
+    );
+  }
+}
+
 class SocialGroup {
   final String id;
   final String name;
   final String? description;
   final String? coverImageUrl;
   final int memberCount;
-  final bool isAdmin;
+  final bool isCurrentUserAdmin;
+  final String? userRole;
+  final List<GroupMember> members;
   final DateTime createdAt;
 
   SocialGroup({
@@ -20,21 +50,27 @@ class SocialGroup {
     this.description,
     this.coverImageUrl,
     this.memberCount = 0,
-    this.isAdmin = false,
+    this.isCurrentUserAdmin = false,
+    this.userRole,
+    this.members = const [],
     required this.createdAt,
   });
 
   factory SocialGroup.fromJson(Map<String, dynamic> json) {
+    final membersList = (json['members'] as List?)
+            ?.map((m) => GroupMember.fromJson(m))
+            .toList() ??
+        [];
+
     return SocialGroup(
       id: json['id'] ?? json['_id'] ?? '',
       name: json['name'],
       description: json['description'],
       coverImageUrl: json['coverImageUrl'],
-      memberCount: json['memberCount'] ?? 0,
-      isAdmin: (json['members'] as List?)?.any(
-            (m) => m['user'] != null && m['role'] == 'admin',
-          ) ??
-          false,
+      memberCount: json['memberCount'] ?? membersList.length,
+      isCurrentUserAdmin: json['isCurrentUserAdmin'] ?? false,
+      userRole: json['userRole'],
+      members: membersList,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])
           : DateTime.now(),
@@ -48,7 +84,8 @@ class SocialGroup {
       'description': description,
       'coverImageUrl': coverImageUrl,
       'memberCount': memberCount,
-      'isAdmin': isAdmin,
+      'isCurrentUserAdmin': isCurrentUserAdmin,
+      'userRole': userRole,
       'createdAt': createdAt.toIso8601String(),
     };
   }
@@ -119,6 +156,7 @@ class Conversation {
   final String id;
   final String type;
   final List<SocialFriend> participants;
+  final String? groupName;
   final Message? lastMessage;
   final String lastMessageAt;
   final Map<String, int> unreadCount;
@@ -127,6 +165,7 @@ class Conversation {
     required this.id,
     required this.type,
     required this.participants,
+    this.groupName,
     this.lastMessage,
     required this.lastMessageAt,
     this.unreadCount = const {},
@@ -139,6 +178,12 @@ class Conversation {
       lastMessage = Message.fromJson(lastMessageData);
     }
 
+    final groupData = json['groupId'];
+    String? groupName;
+    if (groupData is Map<String, dynamic>) {
+      groupName = groupData['name'];
+    }
+
     return Conversation(
       id: json['id'] ?? json['_id'] ?? '',
       type: json['type'] ?? 'direct',
@@ -146,20 +191,31 @@ class Conversation {
               ?.map((p) => SocialFriend.fromJson(p))
               .toList() ??
           [],
+      groupName: groupName,
       lastMessage: lastMessage,
       lastMessageAt: json['lastMessageAt'] ?? '',
       unreadCount: Map<String, int>.from(json['unreadCount'] ?? {}),
     );
   }
 
-  String get name {
-    if (type == 'group') return 'Group Chat';
+  String getNameForUser(String currentUserId) {
+    if (type == 'group') {
+      return groupName ?? 'Group Chat';
+    }
+    if (participants.isEmpty) return 'Chat';
+
+    // Find the participant who is NOT the current user
     final other = participants.firstWhere(
-      (p) => p.id != '',
-      orElse: () => SocialFriend(id: '', displayName: 'Unknown'),
+      (p) => p.id != currentUserId,
+      orElse: () => participants.first,
     );
-    return other.displayName;
+
+    return other.displayName ?? 'Chat';
   }
+
+  String get name => participants.isNotEmpty
+      ? (participants.first.displayName ?? 'Chat')
+      : 'Chat';
 
   int getUnread(String userId) => unreadCount[userId] ?? 0;
 }
@@ -250,6 +306,35 @@ class SocialProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<SocialGroup?> getGroupDetails(String token, String groupId) async {
+    try {
+      final response = await socialService.getGroup(token, groupId);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return SocialGroup.fromJson(data['data']);
+      }
+    } catch (e) {
+      debugPrint('Failed to get group: $e');
+    }
+    return null;
+  }
+
+  Future<bool> updateMemberRole(
+      String token, String groupId, String userId, String role) async {
+    try {
+      final response =
+          await socialService.updateMemberRole(token, groupId, userId, role);
+      if (response.statusCode == 200) {
+        // Reload groups to get updated member info
+        await loadGroups(token);
+        return true;
+      }
+    } catch (e) {
+      debugPrint('Failed to update role: $e');
+    }
+    return false;
   }
 
   Future<bool> createGroup(

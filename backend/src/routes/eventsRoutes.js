@@ -269,4 +269,74 @@ router.put('/:id', auth, asyncWrapper(eventsController.updateEvent));
  */
 router.delete('/:id', auth, asyncWrapper(eventsController.deleteEvent));
 
+/**
+ * @desc    Get event iCal calendar
+ * @route   GET /api/events/:id/calendar
+ * @access  Public
+ */
+router.get('/:id/calendar', asyncWrapper(eventsController.getEventCalendar));
+
+/**
+ * @desc    Add to-do item to event
+ * @route   POST /api/events/:id/todos
+ * @access  Private (Attendee)
+ */
+router.post('/:id/todos', auth, asyncWrapper(eventsController.addTodoItem));
+
+/**
+ * @desc    Update to-do item
+ * @route   PUT /api/events/:id/todos/:todoId
+ * @access  Private (Attendee)
+ */
+router.put('/:id/todos/:todoId', auth, asyncWrapper(eventsController.updateTodoItem));
+
+/**
+ * @desc    Delete to-do item
+ * @route   DELETE /api/events/:id/todos/:todoId
+ * @access  Private (Attendee)
+ */
+router.delete('/:id/todos/:todoId', auth, asyncWrapper(eventsController.deleteTodoItem));
+
+/**
+ * @desc    Add poll to event
+ * @route   POST /api/events/:id/polls
+ * @access  Private (Attendee)
+ */
+router.post('/:id/polls', auth, asyncWrapper(eventsController.addPoll));
+
+/**
+ * @desc    Vote on poll
+ * @route   POST /api/events/:id/polls/:pollId/vote
+ * @access  Private (Attendee)
+ */
+router.post('/:id/polls/:pollId/vote', auth, asyncWrapper(eventsController.voteOnPoll));
+
+/**
+ * @desc    Close poll
+ * @route   POST /api/events/:id/polls/:pollId/close
+ * @access  Private (Event creator)
+ */
+router.post('/:id/polls/:pollId/close', auth, asyncWrapper(eventsController.closePoll));
+
+/**
+ * @desc    Delete poll
+ * @route   DELETE /api/events/:id/polls/:pollId
+ * @access  Private (Poll creator)
+ */
+router.delete('/:id/polls/:pollId', auth, asyncWrapper(eventsController.deletePoll));
+
+/**
+ * @desc    Add comment to event
+ * @route   POST /api/events/:id/comments
+ * @access  Private (Attendee)
+ */
+router.post('/:id/comments', auth, asyncWrapper(eventsController.addComment));
+
+/**
+ * @desc    Delete comment
+ * @route   DELETE /api/events/:id/comments/:commentId
+ * @access  Private (Comment creator)
+ */
+router.delete('/:id/comments/:commentId', auth, asyncWrapper(eventsController.deleteComment));
+
 module.exports = router;

@@ -82,6 +82,8 @@ class Endpoints {
 
   // Social Endpoints
   static const String groups = '/groups';
+  static String groupMemberRole(String groupId, String userId) =>
+      '/groups/$groupId/members/$userId/role';
   static const String friends = '/friends';
   static const String friendRequests = '/friends/requests';
   static const String friendSearch = '/friends/search';
@@ -89,6 +91,7 @@ class Endpoints {
   static const String friendRequest = '/friends/request';
   static const String messages = '/messages';
   static const String messagesConversation = '/messages/conversation';
+  static String messagesGroup(String groupId) => '/messages/group/$groupId';
 }
 
 // Helper method to get event registration endpoint
@@ -98,4 +101,18 @@ class EventEndpoints {
       '/events/$eventId/unregister';
   static String saveEvent(String eventId) => '/events/$eventId/save';
   static String unsaveEvent(String eventId) => '/events/$eventId/unsave';
+  static String eventCalendar(String eventId) => '/events/$eventId/calendar';
+  static String todos(String eventId) => '/events/$eventId/todos';
+  static String todo(String eventId, String todoId) =>
+      '/events/$eventId/todos/$todoId';
+  static String polls(String eventId) => '/events/$eventId/polls';
+  static String poll(String eventId, String pollId) =>
+      '/events/$eventId/polls/$pollId';
+  static String pollVote(String eventId, String pollId) =>
+      '/events/$eventId/polls/$pollId/vote';
+  static String pollClose(String eventId, String pollId) =>
+      '/events/$eventId/polls/$pollId/close';
+  static String comments(String eventId) => '/events/$eventId/comments';
+  static String comment(String eventId, String commentId) =>
+      '/events/$eventId/comments/$commentId';
 }
