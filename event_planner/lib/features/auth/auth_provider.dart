@@ -57,11 +57,11 @@ class AuthProvider with ChangeNotifier {
   bool _isCheckingAuth = true;
   bool _isLoading = false;
   String? _error;
-  
-  // Static profile image shared between My Events and Profile screens
-  static Uint8List? _profileImage;
+
+  // Profile image - cleared on logout to prevent showing old user's image
+  Uint8List? _profileImage;
   Uint8List? get profileImage => _profileImage;
-  
+
   Future<void> setProfileImage(Uint8List? image) async {
     _profileImage = image;
     // Save to persistent storage
@@ -73,7 +73,7 @@ class AuthProvider with ChangeNotifier {
     }
     notifyListeners();
   }
-  
+
   Future<void> _loadProfileImage() async {
     try {
       final base64Image = await storage.read(key: 'profile_image');
@@ -223,6 +223,7 @@ class AuthProvider with ChangeNotifier {
     _token = null;
     _user = null;
     _error = null;
+    _profileImage = null;
     // Only clear auth-related data, not onboarding state
     await storageHelper.deleteToken();
     await storageHelper.deleteUserData();

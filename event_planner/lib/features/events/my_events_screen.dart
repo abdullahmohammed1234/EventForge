@@ -262,7 +262,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                               ),
                             ),
                             child: Text(
-                              'Events',
+                              'My Events',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 20,
@@ -294,7 +294,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                               ),
                             ),
                             child: Text(
-                              'Saved',
+                              'Saved Events',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 20,

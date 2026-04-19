@@ -46,7 +46,9 @@ class AppConfig {
       return '';
     }
     // If already absolute URL, return as-is
-    if (relativeUrl.startsWith('http://') || relativeUrl.startsWith('https://') || relativeUrl.startsWith('data:')) {
+    if (relativeUrl.startsWith('http://') ||
+        relativeUrl.startsWith('https://') ||
+        relativeUrl.startsWith('data:')) {
       return relativeUrl;
     }
     // Prepend base URL
@@ -70,13 +72,23 @@ class Endpoints {
   static const String registeredEvents = '/events/registered';
   static const String savedEvents = '/events/saved';
   static const String uploadEventCover = '/events/upload-cover';
-  
+
   // Discovery Engine Endpoints
   static const String discoverFeed = '/discover/feed';
   static const String hiddenGems = '/discover/hidden-gems';
   static const String underground = '/discover/underground';
   static const String externalEvents = '/discover/external';
   static const String discoveryStats = '/discover/stats';
+
+  // Social Endpoints
+  static const String groups = '/groups';
+  static const String friends = '/friends';
+  static const String friendRequests = '/friends/requests';
+  static const String friendSearch = '/friends/search';
+  static const String friendSuggestions = '/friends/suggestions';
+  static const String friendRequest = '/friends/request';
+  static const String messages = '/messages';
+  static const String messagesConversation = '/messages/conversation';
 }
 
 // Helper method to get event registration endpoint
