@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../events/events_provider.dart';
 import '../events/events_feed_screen.dart';
+import '../../core/config/app_config.dart';
+import 'package:go_router/go_router.dart';
 
 // Design System Colors
 class AppColors {
@@ -19,9 +21,9 @@ class AppColors {
 // Gradient background widget
 class GradientBackground extends StatelessWidget {
   final Widget child;
-  
+
   const GradientBackground({super.key, required this.child});
-  
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -50,6 +52,161 @@ class SearchScreen extends StatefulWidget {
   State<SearchScreen> createState() => _SearchScreenState();
 }
 
+class SearchEventCard extends StatelessWidget {
+  final Event event;
+  final bool isHorizontal;
+
+  const SearchEventCard({
+    super.key,
+    required this.event,
+    this.isHorizontal = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.push('/events/${event.id}'),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            /// 🔥 IMAGE (same as Discover)
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
+                  child: Image.network(
+                    AppConfig.getFullUrl(event.coverImageUrl),
+                    height: 180,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      height: 180,
+                      color: Colors.grey[300],
+                    ),
+                  ),
+                ),
+
+                /// BOOKMARK BUTTON
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: GestureDetector(
+                    onTap: () async {
+                      final provider = context.read<EventsProvider>();
+
+                      bool success;
+
+                      if (event.isUserSaved) {
+                        success = await provider.unsaveEvent(event.id);
+                      } else {
+                        success = await provider.saveEvent(event.id);
+                      }
+
+                      if (!success) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Something went wrong")),
+                        );
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        event.isUserSaved
+                            ? Icons.bookmark
+                            : Icons.bookmark_border,
+                        size: 18,
+                        color: const Color(0xFFFE76B8),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            /// 📄 CONTENT (clean like Discover)
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  /// TITLE
+                  Text(
+                    event.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  /// LOCATION + TIME
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on, size: 14),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          "${event.city} • ${DateFormat('h:mm a').format(event.startTime)}",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 4),
+
+                  /// ORGANIZER
+                  Row(
+                    children: [
+                      const Icon(Icons.person, size: 14),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          "By ${event.organizer?.name ?? 'Unknown'}",
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[500],
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
@@ -58,17 +215,17 @@ class _SearchScreenState extends State<SearchScreen> {
 
   // Filter states
   Set<FilterType> _activeFilters = {};
-  
+
   // Price filter state
   RangeValues _priceRange = const RangeValues(0, 200);
   double _minPrice = 0;
   double _maxPrice = 200;
-  
+
   // Date filter state
   String _selectedDateOption = 'any';
   DateTime? _customStartDate;
   DateTime? _customEndDate;
-  
+
   // Location filter state
   String _locationQuery = '';
   double _distance = 25;
@@ -76,7 +233,16 @@ class _SearchScreenState extends State<SearchScreen> {
   // Category filter state
   String _selectedCategory = 'all';
   final List<String> _categories = [
-    'all', 'music', 'sports', 'arts', 'food', 'technology', 'business', 'social', 'outdoor', 'other'
+    'all',
+    'music',
+    'sports',
+    'arts',
+    'food',
+    'technology',
+    'business',
+    'social',
+    'outdoor',
+    'other'
   ];
 
   // Local filtered events for client-side filtering
@@ -105,7 +271,7 @@ class _SearchScreenState extends State<SearchScreen> {
     final query = _searchController.text.trim();
     final eventsProvider = context.read<EventsProvider>();
     final category = _selectedCategory == 'all' ? null : _selectedCategory;
-    
+
     if (query.isNotEmpty) {
       eventsProvider.searchEvents(query, category: category);
     } else {
@@ -130,28 +296,34 @@ class _SearchScreenState extends State<SearchScreen> {
     final eventsProvider = context.read<EventsProvider>();
     final query = _searchController.text.trim();
     final category = _selectedCategory == 'all' ? null : _selectedCategory;
-    
+
     // If we have advanced filters (price, date, location), we need client-side filtering
     final hasAdvancedFilters = _activeFilters.contains(FilterType.price) ||
         _activeFilters.contains(FilterType.date) ||
-        (_activeFilters.contains(FilterType.location) && _locationQuery.isNotEmpty);
-    
+        (_activeFilters.contains(FilterType.location) &&
+            _locationQuery.isNotEmpty);
+
     if (hasAdvancedFilters) {
       // Get current events and filter client-side
       final allEvents = eventsProvider.events;
-      
+
       setState(() {
         _filteredEvents = _filterEventsLocally(
           allEvents,
           query: query,
           category: category,
-          minPrice: _activeFilters.contains(FilterType.price) ? _minPrice : null,
-          maxPrice: _activeFilters.contains(FilterType.price) ? _maxPrice : null,
-          dateOption: _activeFilters.contains(FilterType.date) ? _selectedDateOption : null,
+          minPrice:
+              _activeFilters.contains(FilterType.price) ? _minPrice : null,
+          maxPrice:
+              _activeFilters.contains(FilterType.price) ? _maxPrice : null,
+          dateOption: _activeFilters.contains(FilterType.date)
+              ? _selectedDateOption
+              : null,
           customStartDate: _customStartDate,
           customEndDate: _customEndDate,
           locationQuery: _locationQuery.isNotEmpty ? _locationQuery : null,
-          distance: _activeFilters.contains(FilterType.location) ? _distance : null,
+          distance:
+              _activeFilters.contains(FilterType.location) ? _distance : null,
         );
         _isFiltering = true;
       });
@@ -160,7 +332,7 @@ class _SearchScreenState extends State<SearchScreen> {
       setState(() {
         _isFiltering = false;
       });
-      
+
       if (query.isNotEmpty) {
         // Use backend search with location support
         eventsProvider.searchEvents(query, category: category);
@@ -194,73 +366,83 @@ class _SearchScreenState extends State<SearchScreen> {
           return false;
         }
       }
-      
+
       // Filter by category
       if (category != null && event.category != category) {
         return false;
       }
-      
+
       // Filter by price
       if (minPrice != null || maxPrice != null) {
         final eventPrice = event.price ?? 0;
         if (minPrice != null && eventPrice < minPrice) return false;
         if (maxPrice != null && eventPrice > maxPrice) return false;
       }
-      
+
       // Filter by date
       if (dateOption != null && dateOption != 'any') {
         final now = DateTime.now();
         final eventDate = event.startTime;
-        
+
         switch (dateOption) {
           case 'today':
-            if (eventDate.year != now.year || 
-                eventDate.month != now.month || 
+            if (eventDate.year != now.year ||
+                eventDate.month != now.month ||
                 eventDate.day != now.day) return false;
             break;
           case 'tomorrow':
             final tomorrow = now.add(const Duration(days: 1));
-            if (eventDate.year != tomorrow.year || 
-                eventDate.month != tomorrow.month || 
+            if (eventDate.year != tomorrow.year ||
+                eventDate.month != tomorrow.month ||
                 eventDate.day != tomorrow.day) return false;
             break;
           case 'thisWeek':
             final endOfWeek = now.add(Duration(days: 7 - now.weekday));
-            if (eventDate.isBefore(now) || eventDate.isAfter(endOfWeek)) return false;
+            if (eventDate.isBefore(now) || eventDate.isAfter(endOfWeek))
+              return false;
             break;
           case 'thisWeekend':
             final daysUntilSaturday = 6 - now.weekday;
-            final saturday = DateTime(now.year, now.month, now.day + daysUntilSaturday);
+            final saturday =
+                DateTime(now.year, now.month, now.day + daysUntilSaturday);
             final sunday = saturday.add(const Duration(days: 1));
-            if (eventDate.year != saturday.year || eventDate.month != saturday.month) {
-              if (eventDate.year != sunday.year || eventDate.month != sunday.month) return false;
+            if (eventDate.year != saturday.year ||
+                eventDate.month != saturday.month) {
+              if (eventDate.year != sunday.year ||
+                  eventDate.month != sunday.month) return false;
             }
-            if (eventDate.day != saturday.day && eventDate.day != sunday.day) return false;
+            if (eventDate.day != saturday.day && eventDate.day != sunday.day)
+              return false;
             break;
           case 'custom':
             // Filter by date range
             if (customStartDate != null && customEndDate != null) {
-              final startOfStartDay = DateTime(customStartDate.year, customStartDate.month, customStartDate.day);
-              final endOfEndDay = DateTime(customEndDate.year, customEndDate.month, customEndDate.day, 23, 59, 59);
-              if (eventDate.isBefore(startOfStartDay) || eventDate.isAfter(endOfEndDay)) return false;
+              final startOfStartDay = DateTime(customStartDate.year,
+                  customStartDate.month, customStartDate.day);
+              final endOfEndDay = DateTime(customEndDate.year,
+                  customEndDate.month, customEndDate.day, 23, 59, 59);
+              if (eventDate.isBefore(startOfStartDay) ||
+                  eventDate.isAfter(endOfEndDay)) return false;
             } else if (customStartDate != null) {
-              final startOfDay = DateTime(customStartDate.year, customStartDate.month, customStartDate.day);
+              final startOfDay = DateTime(customStartDate.year,
+                  customStartDate.month, customStartDate.day);
               if (eventDate.isBefore(startOfDay)) return false;
             }
             break;
         }
       }
-      
+
       // Filter by location
       if (locationQuery != null && locationQuery.isNotEmpty) {
         final lowerLocation = locationQuery.toLowerCase();
         final cityMatch = event.city.toLowerCase().contains(lowerLocation);
-        final addressMatch = event.address?.toLowerCase().contains(lowerLocation) ?? false;
+        final addressMatch =
+            event.address?.toLowerCase().contains(lowerLocation) ?? false;
         if (!cityMatch && !addressMatch) {
           return false;
         }
       }
-      
+
       return true;
     }).toList();
   }
@@ -366,23 +548,24 @@ class _SearchScreenState extends State<SearchScreen> {
     final eventsProvider = context.watch<EventsProvider>();
 
     // Determine which events to display
-    final displayEvents = _isFiltering ? _filteredEvents : eventsProvider.events;
+    final displayEvents =
+        _isFiltering ? _filteredEvents : eventsProvider.events;
 
     return GradientBackground(
       child: Scaffold(
-backgroundColor: Colors.white,
+        backgroundColor: Colors.white,
         body: SafeArea(
           child: Column(
             children: [
               // Top Section with Search Bar and Back Button
               _buildSearchHeader(),
-              
+
               // Horizontal Filter Chips
               _buildFilterChips(),
-              
+
               // Spacing below filter chips
               const SizedBox(height: 16),
-              
+
               // Search Results
               Expanded(
                 child: Container(
@@ -401,7 +584,9 @@ backgroundColor: Colors.white,
                     ],
                   ),
                   child: eventsProvider.isLoading
-                      ? const Center(child: CircularProgressIndicator(color: AppColors.pink))
+                      ? const Center(
+                          child:
+                              CircularProgressIndicator(color: AppColors.pink))
                       : displayEvents.isEmpty
                           ? _buildEmptyState()
                           : _buildEventList(displayEvents),
@@ -523,7 +708,8 @@ backgroundColor: Colors.white,
           _buildFilterChip(
             label: 'Category',
             icon: Icons.category_outlined,
-            isActive: _activeFilters.contains(FilterType.category) || _selectedCategory != 'all',
+            isActive: _activeFilters.contains(FilterType.category) ||
+                _selectedCategory != 'all',
             onTap: _showCategoryFilter,
           ),
           const SizedBox(width: 8),
@@ -682,7 +868,7 @@ backgroundColor: Colors.white,
           final event = events[index];
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
-            child: EventCard(event: event),
+            child: SearchEventCard(event: event),
           );
         },
       ),
@@ -737,7 +923,7 @@ class _PriceFilterSheetState extends State<_PriceFilterSheet> {
             ),
           ),
           const SizedBox(height: 24),
-          
+
           // Title
           const Text(
             'Price',
@@ -748,7 +934,7 @@ class _PriceFilterSheetState extends State<_PriceFilterSheet> {
             ),
           ),
           const SizedBox(height: 24),
-          
+
           // Price range display
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -758,7 +944,7 @@ class _PriceFilterSheetState extends State<_PriceFilterSheet> {
             ],
           ),
           const SizedBox(height: 16),
-          
+
           // Range Slider
           RangeSlider(
             values: _currentRange,
@@ -774,7 +960,7 @@ class _PriceFilterSheetState extends State<_PriceFilterSheet> {
             },
           ),
           const SizedBox(height: 32),
-          
+
           // Apply Button
           SizedBox(
             width: double.infinity,
@@ -934,7 +1120,7 @@ class _DateFilterSheetState extends State<_DateFilterSheet> {
             ),
           ),
           const SizedBox(height: 24),
-          
+
           // Title
           const Text(
             'Date',
@@ -945,14 +1131,14 @@ class _DateFilterSheetState extends State<_DateFilterSheet> {
             ),
           ),
           const SizedBox(height: 24),
-          
+
           // Date Options
           ..._dateOptions.map((option) => _buildDateOption(
-            option['label'],
-            option['value'],
-            option['icon'],
-          )),
-          
+                option['label'],
+                option['value'],
+                option['icon'],
+              )),
+
           if (_selectedOption == 'custom' && _customStartDate != null)
             Padding(
               padding: const EdgeInsets.only(top: 12, left: 52),
@@ -964,16 +1150,17 @@ class _DateFilterSheetState extends State<_DateFilterSheet> {
                 ),
               ),
             ),
-          
+
           const SizedBox(height: 32),
-          
+
           // Apply Button
           SizedBox(
             width: double.infinity,
             height: 56,
             child: ElevatedButton(
               onPressed: () {
-                widget.onApply(_selectedOption, _customStartDate, _customEndDate);
+                widget.onApply(
+                    _selectedOption, _customStartDate, _customEndDate);
                 Navigator.pop(context);
               },
               style: ElevatedButton.styleFrom(
@@ -1001,7 +1188,7 @@ class _DateFilterSheetState extends State<_DateFilterSheet> {
 
   Widget _buildDateOption(String label, String value, IconData icon) {
     final isSelected = _selectedOption == value;
-    
+
     return GestureDetector(
       onTap: () {
         if (value == 'custom') {
@@ -1016,10 +1203,12 @@ class _DateFilterSheetState extends State<_DateFilterSheet> {
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.pink.withOpacity(0.1) : Colors.transparent,
+          color:
+              isSelected ? AppColors.pink.withOpacity(0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? AppColors.pink : AppColors.grey.withOpacity(0.2),
+            color:
+                isSelected ? AppColors.pink : AppColors.grey.withOpacity(0.2),
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -1076,7 +1265,8 @@ class _LocationFilterSheetState extends State<_LocationFilterSheet> {
   @override
   void initState() {
     super.initState();
-    _locationController = TextEditingController(text: widget.locationController.text);
+    _locationController =
+        TextEditingController(text: widget.locationController.text);
     _distance = widget.distance;
   }
 
@@ -1104,7 +1294,7 @@ class _LocationFilterSheetState extends State<_LocationFilterSheet> {
             ),
           ),
           const SizedBox(height: 24),
-          
+
           // Title
           const Text(
             'Location',
@@ -1115,7 +1305,7 @@ class _LocationFilterSheetState extends State<_LocationFilterSheet> {
             ),
           ),
           const SizedBox(height: 24),
-          
+
           // Location Search Field
           Container(
             decoration: BoxDecoration(
@@ -1150,38 +1340,45 @@ class _LocationFilterSheetState extends State<_LocationFilterSheet> {
               ),
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Quick location suggestions
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              'New York', 'Los Angeles', 'Chicago', 'San Francisco', 'Seattle'
-            ].map((city) => GestureDetector(
-              onTap: () {
-                _locationController.text = city;
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.beige.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  city,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.black,
-                  ),
-                ),
-              ),
-            )).toList(),
+              'New York',
+              'Los Angeles',
+              'Chicago',
+              'San Francisco',
+              'Seattle'
+            ]
+                .map((city) => GestureDetector(
+                      onTap: () {
+                        _locationController.text = city;
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: AppColors.beige.withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          city,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.black,
+                          ),
+                        ),
+                      ),
+                    ))
+                .toList(),
           ),
-          
+
           const SizedBox(height: 32),
-          
+
           // Distance Label
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1195,7 +1392,8 @@ class _LocationFilterSheetState extends State<_LocationFilterSheet> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   color: AppColors.pink.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
@@ -1212,7 +1410,7 @@ class _LocationFilterSheetState extends State<_LocationFilterSheet> {
             ],
           ),
           const SizedBox(height: 16),
-          
+
           // Distance Slider
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
@@ -1234,7 +1432,7 @@ class _LocationFilterSheetState extends State<_LocationFilterSheet> {
               },
             ),
           ),
-          
+
           // Distance markers
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -1258,9 +1456,9 @@ class _LocationFilterSheetState extends State<_LocationFilterSheet> {
               ],
             ),
           ),
-          
+
           const SizedBox(height: 32),
-          
+
           // Apply Button
           SizedBox(
             width: double.infinity,
@@ -1375,7 +1573,7 @@ class _CategoryFilterSheetState extends State<_CategoryFilterSheet> {
             ),
           ),
           const SizedBox(height: 24),
-          
+
           // Title
           const Text(
             'Category',
@@ -1386,7 +1584,7 @@ class _CategoryFilterSheetState extends State<_CategoryFilterSheet> {
             ),
           ),
           const SizedBox(height: 24),
-          
+
           // Category Grid
           Wrap(
             spacing: 12,
@@ -1394,7 +1592,7 @@ class _CategoryFilterSheetState extends State<_CategoryFilterSheet> {
             children: widget.categories.map((category) {
               final isSelected = _selectedCategory == category;
               final color = _getCategoryColor(category);
-              
+
               return GestureDetector(
                 onTap: () {
                   setState(() {
@@ -1403,12 +1601,14 @@ class _CategoryFilterSheetState extends State<_CategoryFilterSheet> {
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   decoration: BoxDecoration(
                     color: isSelected ? color : AppColors.white,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isSelected ? color : AppColors.grey.withOpacity(0.3),
+                      color:
+                          isSelected ? color : AppColors.grey.withOpacity(0.3),
                       width: isSelected ? 2 : 1,
                     ),
                     boxShadow: isSelected
@@ -1431,10 +1631,13 @@ class _CategoryFilterSheetState extends State<_CategoryFilterSheet> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        category == 'all' ? 'All' : category[0].toUpperCase() + category.substring(1),
+                        category == 'all'
+                            ? 'All'
+                            : category[0].toUpperCase() + category.substring(1),
                         style: TextStyle(
                           color: isSelected ? AppColors.white : AppColors.black,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.normal,
                           fontSize: 14,
                         ),
                       ),
@@ -1444,9 +1647,9 @@ class _CategoryFilterSheetState extends State<_CategoryFilterSheet> {
               );
             }).toList(),
           ),
-          
+
           const SizedBox(height: 32),
-          
+
           // Apply Button
           SizedBox(
             width: double.infinity,

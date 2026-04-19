@@ -285,7 +285,7 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
               children: [
                 const SizedBox(height: 12),
 
-                /// 👋 HEADER
+                /// HEADER
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
@@ -334,17 +334,6 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
                     _getFilteredHotEvents(eventsProvider.events)),
               ],
             ),
-          ),
-        ),
-
-        /// FAB
-        Positioned(
-          bottom: 16,
-          right: 16,
-          child: FloatingActionButton.extended(
-            onPressed: () => context.go('/events/create'),
-            label: const Text('Create Event'),
-            icon: const Icon(Icons.add),
           ),
         ),
       ],
