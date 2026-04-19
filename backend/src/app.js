@@ -13,6 +13,9 @@ const authRoutes = require('./routes/authRoutes');
 const eventsRoutes = require('./routes/eventsRoutes');
 const mapsRoutes = require('./routes/mapsRoutes');
 const discoveryRoutes = require('./routes/discoveryRoutes');
+const groupRoutes = require('./routes/groupRoutes');
+const friendRoutes = require('./routes/friendRoutes');
+const messageRoutes = require('./routes/messageRoutes');
 
 // Initialize Express app
 const app = express();
@@ -81,6 +84,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/events', eventsRoutes);
 app.use('/api/maps', mapsRoutes);
 app.use('/api/discover', discoveryRoutes);
+app.use('/api/groups', groupRoutes);
+app.use('/api/friends', friendRoutes);
+app.use('/api/messages', messageRoutes);
 
 // API documentation endpoint
 app.get('/api', (req, res) => {

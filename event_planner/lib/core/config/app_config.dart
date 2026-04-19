@@ -79,6 +79,16 @@ class Endpoints {
   static const String underground = '/discover/underground';
   static const String externalEvents = '/discover/external';
   static const String discoveryStats = '/discover/stats';
+
+  // Social Endpoints
+  static const String groups = '/groups';
+  static const String friends = '/friends';
+  static const String friendRequests = '/friends/requests';
+  static const String friendSearch = '/friends/search';
+  static const String friendSuggestions = '/friends/suggestions';
+  static const String friendRequest = '/friends/request';
+  static const String messages = '/messages';
+  static const String messagesConversation = '/messages/conversation';
 }
 
 // Helper method to get event registration endpoint

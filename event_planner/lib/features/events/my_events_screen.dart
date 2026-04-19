@@ -264,7 +264,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                               ),
                             ),
                             child: Text(
-                              'My events',
+                              'My Events',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 20,
@@ -296,7 +296,7 @@ class _MyEventsScreenState extends State<MyEventsScreen> {
                               ),
                             ),
                             child: Text(
-                              'Saved events',
+                              'Saved Events',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 20,
@@ -726,7 +726,6 @@ class _RegisteredEventCard extends StatelessWidget {
             child: SizedBox(
               width: 96,
               height: 96,
-<<<<<<< HEAD
               child:
                   event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty
                       ? Image.network(
@@ -748,18 +747,6 @@ class _RegisteredEventCard extends StatelessWidget {
                             color: Colors.grey,
                             size: 32,
                           ),
-=======
-              child: event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty
-                  ? Image.network(
-                      AppConfig.getFullUrl(event.coverImageUrl),
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        color: Colors.grey.shade300,
-                        child: const Icon(
-                          Icons.image_outlined,
-                          color: Colors.grey,
-                          size: 32,
->>>>>>> 534734aca8c62dd454c1377225b37137575748fa
                         ),
             ),
           ),
