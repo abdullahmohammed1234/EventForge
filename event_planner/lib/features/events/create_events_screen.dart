@@ -77,7 +77,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
 
           // Upload the image first
           final eventsProvider = context.read<EventsProvider>();
-          final uploadedUrl = await eventsProvider.uploadEventCoverWeb(bytes, image.name);
+          final uploadedUrl =
+              await eventsProvider.uploadEventCoverWeb(bytes, image.name);
 
           setState(() {
             _isUploadingImage = false;
@@ -92,7 +93,9 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             );
           } else if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(eventsProvider.error ?? 'Failed to upload image')),
+              SnackBar(
+                  content:
+                      Text(eventsProvider.error ?? 'Failed to upload image')),
             );
           }
         } else {
@@ -104,7 +107,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
 
           // Upload the image first
           final eventsProvider = context.read<EventsProvider>();
-          final uploadedUrl = await eventsProvider.uploadEventCover(_coverImage!);
+          final uploadedUrl =
+              await eventsProvider.uploadEventCover(_coverImage!);
 
           setState(() {
             _isUploadingImage = false;
@@ -119,7 +123,9 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             );
           } else if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(eventsProvider.error ?? 'Failed to upload image')),
+              SnackBar(
+                  content:
+                      Text(eventsProvider.error ?? 'Failed to upload image')),
             );
           }
         }
@@ -168,7 +174,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   Future<void> _selectEndDateTime() async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _startDateTime ?? DateTime.now().add(const Duration(days: 1)),
+      initialDate:
+          _startDateTime ?? DateTime.now().add(const Duration(days: 1)),
       firstDate: _startDateTime ?? DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
@@ -221,11 +228,17 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             : int.parse(_maxAttendeesController.text),
         tags: _tagsController.text.isEmpty
             ? []
-            : _tagsController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
+            : _tagsController.text
+                .split(',')
+                .map((e) => e.trim())
+                .where((e) => e.isNotEmpty)
+                .toList(),
         coverImageUrl: _coverImageUrl != null && _coverImageUrl!.isNotEmpty
-            ? (_coverImageUrl!.startsWith('http://') || _coverImageUrl!.startsWith('https://')
+            ? (_coverImageUrl!.startsWith('http://') ||
+                    _coverImageUrl!.startsWith('https://')
                 ? _coverImageUrl! // Keep full Cloudinary URL
-                : _coverImageUrl!.replaceAll(AppConfig.baseUrl, '')) // Strip local URL
+                : _coverImageUrl!
+                    .replaceAll(AppConfig.baseUrl, '')) // Strip local URL
             : null,
       );
 
@@ -236,7 +249,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         context.pushReplacement('/home');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(eventsProvider.error ?? 'Failed to create event')),
+          SnackBar(
+              content: Text(eventsProvider.error ?? 'Failed to create event')),
         );
       }
     }
@@ -257,235 +271,407 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     final eventsProvider = context.watch<EventsProvider>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create Event'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/events'),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Cover Image Section
-              GestureDetector(
-                onTap: _isUploadingImage ? null : _pickCoverImage,
-                child: Container(
-                  height: 180,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey[300]!),
+      backgroundColor: const Color(0xFFF3F3F7),
+      body: SafeArea(
+        child: Column(
+          children: [
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  _CircleIconButton(
+                    icon: Icons.arrow_back,
+                    onTap: () => context.go('/events'),
                   ),
-                  child: (kIsWeb ? _coverImageBytes != null : _coverImage != null)
-                      ? Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: kIsWeb
-                                  ? Image.memory(
-                                      _coverImageBytes!,
-                                      fit: BoxFit.cover,
-                                    )
-                                  : Image.file(
-                                      _coverImage!,
-                                      fit: BoxFit.cover,
+                  const Expanded(
+                    child: Center(
+                      child: Text(
+                        'Create Event',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 44),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      GestureDetector(
+                        onTap: _isUploadingImage ? null : _pickCoverImage,
+                        child: Container(
+                          height: 180,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: Colors.black, width: 1),
+                          ),
+                          child: (kIsWeb
+                                  ? _coverImageBytes != null
+                                  : _coverImage != null)
+                              ? Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(14),
+                                      child: kIsWeb
+                                          ? Image.memory(
+                                              _coverImageBytes!,
+                                              fit: BoxFit.cover,
+                                            )
+                                          : Image.file(
+                                              _coverImage!,
+                                              fit: BoxFit.cover,
+                                            ),
                                     ),
+                                    if (_isUploadingImage)
+                                      Container(
+                                        color: Colors.black.withOpacity(0.3),
+                                        child: const Center(
+                                          child: CircularProgressIndicator(),
+                                        ),
+                                      ),
+                                  ],
+                                )
+                              : _isUploadingImage
+                                  ? const Center(
+                                      child: CircularProgressIndicator())
+                                  : Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.add_photo_alternate,
+                                          size: 48,
+                                          color: Colors.grey[400],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Add Cover Image',
+                                          style: TextStyle(
+                                            color: Colors.grey[600],
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _StyledTextField(
+                        controller: _titleController,
+                        labelText: 'Event Title *',
+                        prefixIcon: Icons.text_fields,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter an event title';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      _StyledDropdown(
+                        value: _selectedCategory,
+                        labelText: 'Category *',
+                        prefixIcon: Icons.category,
+                        items: _categories,
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedCategory = value!;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      _StyledTextField(
+                        controller: _cityController,
+                        labelText: 'City *',
+                        prefixIcon: Icons.location_city,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a city';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      _StyledTextField(
+                        controller: _addressController,
+                        labelText: 'Address (optional)',
+                        prefixIcon: Icons.location_on,
+                      ),
+                      const SizedBox(height: 14),
+                      _StyledDateField(
+                        value: _startDateTime,
+                        labelText: 'Start Date & Time *',
+                        prefixIcon: Icons.calendar_today,
+                        onTap: _selectStartDateTime,
+                        hintText: 'Select date and time',
+                      ),
+                      const SizedBox(height: 14),
+                      _StyledDateField(
+                        value: _endDateTime,
+                        labelText: 'End Date & Time (optional)',
+                        prefixIcon: Icons.calendar_today,
+                        onTap: _selectEndDateTime,
+                        hintText: 'Select date and time',
+                      ),
+                      const SizedBox(height: 14),
+                      _StyledTextField(
+                        controller: _descriptionController,
+                        labelText: 'Description (optional)',
+                        prefixIcon: Icons.description,
+                        maxLines: 4,
+                      ),
+                      const SizedBox(height: 14),
+                      _StyledTextField(
+                        controller: _maxAttendeesController,
+                        labelText: 'Max Attendees (optional)',
+                        prefixIcon: Icons.people,
+                        keyboardType: TextInputType.number,
+                      ),
+                      const SizedBox(height: 14),
+                      _StyledTextField(
+                        controller: _tagsController,
+                        labelText: 'Tags (optional)',
+                        prefixIcon: Icons.tag,
+                        hintText: 'Enter tags separated by commas',
+                      ),
+                      if (eventsProvider.error != null) ...[
+                        const SizedBox(height: 14),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red[50],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            eventsProvider.error!,
+                            style: TextStyle(color: Colors.red[700]),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFF56EB3),
+                            foregroundColor: Colors.black,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              side: const BorderSide(
+                                  color: Colors.black, width: 1),
                             ),
-                            if (_isUploadingImage)
-                              Container(
-                                color: Colors.black.withOpacity(0.3),
-                                child: const Center(
-                                  child: CircularProgressIndicator(),
-                                ),
-                              ),
-                          ],
-                        )
-                      : _isUploadingImage
-                          ? const Center(child: CircularProgressIndicator())
-                          : Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.add_photo_alternate,
-                                  size: 48,
-                                  color: Colors.grey[400],
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Add Cover Image',
+                          ),
+                          onPressed: eventsProvider.isLoading
+                              ? null
+                              : _handleCreateEvent,
+                          child: eventsProvider.isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.black,
+                                    ),
+                                  ),
+                                )
+                              : const Text(
+                                  'Create Event',
                                   style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 14,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                              ],
-                            ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Event Title *',
-                  prefixIcon: Icon(Icons.text_fields),
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter an event title';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: _selectedCategory,
-                decoration: const InputDecoration(
-                  labelText: 'Category *',
-                  prefixIcon: Icon(Icons.category),
-                  border: OutlineInputBorder(),
-                ),
-                items: _categories.map((category) {
-                  return DropdownMenuItem(
-                    value: category,
-                    child: Text(category.toUpperCase()),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedCategory = value!;
-                  });
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _cityController,
-                decoration: const InputDecoration(
-                  labelText: 'City *',
-                  prefixIcon: Icon(Icons.location_city),
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a city';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _addressController,
-                decoration: const InputDecoration(
-                  labelText: 'Address (optional)',
-                  prefixIcon: Icon(Icons.location_on),
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              InkWell(
-                onTap: _selectStartDateTime,
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Start Date & Time *',
-                    prefixIcon: Icon(Icons.calendar_today),
-                    border: OutlineInputBorder(),
-                  ),
-                  child: Text(
-                    _startDateTime != null
-                        ? DateFormat('EEE, MMM d, yyyy • h:mm a')
-                            .format(_startDateTime!)
-                        : 'Select date and time',
-                    style: TextStyle(
-                      color:
-                          _startDateTime != null ? Colors.black : Colors.grey,
-                    ),
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              InkWell(
-                onTap: _selectEndDateTime,
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'End Date & Time (optional)',
-                    prefixIcon: Icon(Icons.calendar_today),
-                    border: OutlineInputBorder(),
-                  ),
-                  child: Text(
-                    _endDateTime != null
-                        ? DateFormat('EEE, MMM d, yyyy • h:mm a')
-                            .format(_endDateTime!)
-                        : 'Select date and time',
-                    style: TextStyle(
-                      color:
-                          _endDateTime != null ? Colors.black : Colors.grey,
-                    ),
-                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CircleIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _CircleIconButton({
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 42,
+        height: 42,
+        decoration: const BoxDecoration(
+          color: Color(0xFFF7A4CD),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          icon,
+          color: Colors.white,
+          size: 22,
+        ),
+      ),
+    );
+  }
+}
+
+class _StyledTextField extends StatelessWidget {
+  final TextEditingController controller;
+  final String labelText;
+  final IconData prefixIcon;
+  final String? hintText;
+  final int maxLines;
+  final TextInputType? keyboardType;
+  final String? Function(String?)? validator;
+
+  const _StyledTextField({
+    required this.controller,
+    required this.labelText,
+    required this.prefixIcon,
+    this.hintText,
+    this.maxLines = 1,
+    this.keyboardType,
+    this.validator,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: TextFormField(
+        controller: controller,
+        maxLines: maxLines,
+        keyboardType: keyboardType,
+        validator: validator,
+        decoration: InputDecoration(
+          labelText: labelText,
+          hintText: hintText,
+          prefixIcon: Icon(prefixIcon, color: Colors.black54),
+          labelStyle: const TextStyle(color: Colors.black54),
+          border: InputBorder.none,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        ),
+      ),
+    );
+  }
+}
+
+class _StyledDropdown extends StatelessWidget {
+  final String value;
+  final String labelText;
+  final IconData prefixIcon;
+  final List<String> items;
+  final ValueChanged<String?> onChanged;
+
+  const _StyledDropdown({
+    required this.value,
+    required this.labelText,
+    required this.prefixIcon,
+    required this.items,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: DropdownButtonFormField<String>(
+        value: value,
+        decoration: InputDecoration(
+          labelText: labelText,
+          prefixIcon: Icon(prefixIcon, color: Colors.black54),
+          labelStyle: const TextStyle(color: Colors.black54),
+          border: InputBorder.none,
+        ),
+        items: items.map((item) {
+          return DropdownMenuItem(
+            value: item,
+            child: Text(item.toUpperCase()),
+          );
+        }).toList(),
+        onChanged: onChanged,
+      ),
+    );
+  }
+}
+
+class _StyledDateField extends StatelessWidget {
+  final DateTime? value;
+  final String labelText;
+  final IconData prefixIcon;
+  final VoidCallback onTap;
+  final String hintText;
+
+  const _StyledDateField({
+    required this.value,
+    required this.labelText,
+    required this.prefixIcon,
+    required this.onTap,
+    required this.hintText,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        child: Row(
+          children: [
+            Icon(prefixIcon, color: Colors.black54),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                value != null
+                    ? DateFormat('EEE, MMM d, yyyy • h:mm a').format(value!)
+                    : hintText,
+                style: TextStyle(
+                  color: value != null ? Colors.black : Colors.black54,
+                  fontSize: 16,
                 ),
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _descriptionController,
-                maxLines: 5,
-                decoration: const InputDecoration(
-                  labelText: 'Description (optional)',
-                  alignLabelWithHint: true,
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _maxAttendeesController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Max Attendees (optional)',
-                  prefixIcon: Icon(Icons.people),
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _tagsController,
-                decoration: const InputDecoration(
-                  labelText: 'Tags (optional)',
-                  hintText: 'Enter tags separated by commas',
-                  prefixIcon: Icon(Icons.tag),
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              if (eventsProvider.error != null) ...[
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.red[50],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    eventsProvider.error!,
-                    style: TextStyle(color: Colors.red[700]),
-                  ),
-                ),
-              ],
-              ElevatedButton(
-                onPressed:
-                    eventsProvider.isLoading ? null : _handleCreateEvent,
-                child: eventsProvider.isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Create Event'),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
