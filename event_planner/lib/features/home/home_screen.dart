@@ -71,8 +71,8 @@ class _HomeScreenState extends State<HomeScreen> {
         index: _currentIndex,
         children: _screens,
       ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.only(bottom: 16),
+      bottomNavigationBar: SafeArea(
+        top: false,
         child: BottomFloatingNav(
           currentIndex: _currentIndex,
           onTap: _onTabSelected,
