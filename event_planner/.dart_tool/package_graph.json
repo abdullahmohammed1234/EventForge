@@ -27,6 +27,7 @@
         "qr_flutter",
         "share_plus",
         "shared_preferences",
+        "timezone",
         "url_launcher"
       ],
       "devDependencies": [
@@ -163,6 +164,13 @@
         "image_picker_macos",
         "image_picker_platform_interface",
         "image_picker_windows"
+      ]
+    },
+    {
+      "name": "timezone",
+      "version": "0.9.4",
+      "dependencies": [
+        "path"
       ]
     },
     {
@@ -706,13 +714,6 @@
         "flutter",
         "flutter_plugin_android_lifecycle",
         "image_picker_platform_interface"
-      ]
-    },
-    {
-      "name": "timezone",
-      "version": "0.9.4",
-      "dependencies": [
-        "path"
       ]
     },
     {

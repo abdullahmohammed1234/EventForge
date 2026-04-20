@@ -31,6 +31,7 @@ import 'features/notifications/notifications_screen.dart';
 import 'features/discover/discover_screen.dart';
 import 'features/groups/social_provider.dart';
 import 'features/messages/messages_screen.dart';
+import 'features/settings/settings_screen.dart';
 import 'core/api/social_service.dart';
 
 void main() async {
@@ -46,25 +47,16 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Load environment variables from .env file
+// Load environment variables from .env file
   try {
-    // Try to load from current directory first (for development)
+    // First try to load from root directory
     await dotenv.load(fileName: '.env');
+    debugPrint(
+        'Environment loaded from root. LOCAL_IP = ${dotenv.env['LOCAL_IP']}');
   } catch (e) {
-    // If that fails, try to load from the application documents directory
-    try {
-      final directory = await getApplicationDocumentsDirectory();
-      final envFile = File('${directory.path}/.env');
-      if (await envFile.exists()) {
-        await dotenv.load(fileName: envFile.path);
-      }
-    } catch (_) {
-      // Fall back to empty env if all else fails
-      debugPrint('Warning: Could not load .env file');
-    }
+    debugPrint('Warning: Could not load .env file: $e');
   }
 
-  debugPrint('Environment loaded. LOCAL_IP = ${dotenv.env['LOCAL_IP']}');
   // Initialize secure storage
   final storage = FlutterSecureStorage();
 
@@ -242,6 +234,11 @@ class EventPlannerApp extends StatelessWidget {
           final conversationId = state.pathParameters['conversationId']!;
           return MessagesScreen(conversationId: conversationId);
         },
+      ),
+      GoRoute(
+        path: '/settings',
+        name: 'settings',
+        builder: (context, state) => const SettingsScreen(),
       ),
     ],
     redirect: (context, state) {

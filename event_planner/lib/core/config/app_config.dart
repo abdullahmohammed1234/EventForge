@@ -14,7 +14,13 @@ class AppConfig {
     if (kDebugMode) {
       // Get local IP from .env file
       // Create a .env file in the project root with: LOCAL_IP=192.168.x.x
-      final String? localIP = dotenv.env['LOCAL_IP'];
+      String? localIP;
+      try {
+        localIP = dotenv.env['LOCAL_IP'];
+      } catch (e) {
+        // dotenv not initialized, use fallback
+        localIP = null;
+      }
 
       if (localIP != null && localIP.isNotEmpty) {
         return 'http://$localIP:3000/api';
@@ -31,7 +37,12 @@ class AppConfig {
   // Get the base URL without /api suffix (for uploads, etc.)
   static String get baseUrl {
     if (kDebugMode) {
-      final String? localIP = dotenv.env['LOCAL_IP'];
+      String? localIP;
+      try {
+        localIP = dotenv.env['LOCAL_IP'];
+      } catch (e) {
+        localIP = null;
+      }
       if (localIP != null && localIP.isNotEmpty) {
         return 'http://$localIP:3000';
       }

@@ -45,7 +45,7 @@ class TicketViewScreen extends StatelessWidget {
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 24),
-                          
+
                           // QR Code
                           Container(
                             padding: const EdgeInsets.all(16),
@@ -55,7 +55,8 @@ class TicketViewScreen extends StatelessWidget {
                               border: Border.all(color: Colors.grey[300]!),
                             ),
                             child: QrImageView(
-                              data: 'EVENT_REGISTRATION:${event.id}:${event.registrationId ?? DateTime.now().millisecondsSinceEpoch}',
+                              data:
+                                  'EVENT_REGISTRATION:${event.id}:${event.registrationId ?? DateTime.now().millisecondsSinceEpoch}',
                               version: QrVersions.auto,
                               size: 200,
                               backgroundColor: Colors.white,
@@ -74,7 +75,7 @@ class TicketViewScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Event Details Card
                   Card(
                     elevation: 4,
@@ -114,7 +115,7 @@ class TicketViewScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Ticket Info
                   Container(
                     padding: const EdgeInsets.all(16),

@@ -605,24 +605,36 @@ class _StyledDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? Colors.grey[850] : Colors.white,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+        ),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 14),
       child: DropdownButtonFormField<String>(
         value: value,
         decoration: InputDecoration(
           labelText: labelText,
-          prefixIcon: Icon(prefixIcon, color: Colors.black54),
-          labelStyle: const TextStyle(color: Colors.black54),
+          prefixIcon: Icon(prefixIcon,
+              color: isDark ? Colors.grey[400] : Colors.black54),
+          labelStyle:
+              TextStyle(color: isDark ? Colors.grey[400] : Colors.black54),
           border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
         ),
+        dropdownColor: isDark ? Colors.grey[850] : Colors.white,
         items: items.map((item) {
           return DropdownMenuItem(
             value: item,
-            child: Text(item.toUpperCase()),
+            child: Text(
+              item.toUpperCase(),
+              style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+            ),
           );
         }).toList(),
         onChanged: onChanged,

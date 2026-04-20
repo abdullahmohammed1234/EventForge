@@ -94,15 +94,17 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
+                      style: const TextStyle(color: Colors.black87),
                       decoration: const InputDecoration(
                         labelText: 'Email',
-                        labelStyle: TextStyle(color: Colors.white70),
-                        prefixIcon: Icon(Icons.email_outlined, color: Colors.white70),
+                        labelStyle: TextStyle(color: Colors.black54),
+                        prefixIcon:
+                            Icon(Icons.email_outlined, color: Colors.black54),
                         enabledBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.white70),
+                          borderSide: BorderSide(color: Colors.black54),
                         ),
                         focusedBorder: UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.white),
+                          borderSide: BorderSide(color: Color(0xFFF062AE)),
                         ),
                       ),
                       validator: (value) {
@@ -119,16 +121,18 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
+                      style: const TextStyle(color: Colors.black87),
                       decoration: InputDecoration(
                         labelText: 'Password',
-                        labelStyle: const TextStyle(color: Colors.white70),
-                        prefixIcon: const Icon(Icons.lock_outline, color: Colors.white70),
+                        labelStyle: const TextStyle(color: Colors.black54),
+                        prefixIcon: const Icon(Icons.lock_outline,
+                            color: Colors.black54),
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscurePassword
                                 ? Icons.visibility_outlined
                                 : Icons.visibility_off_outlined,
-                            color: Colors.white70,
+                            color: Colors.black54,
                           ),
                           onPressed: () {
                             setState(() {
@@ -137,10 +141,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           },
                         ),
                         enabledBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.white70),
+                          borderSide: BorderSide(color: Colors.black54),
                         ),
                         focusedBorder: const UnderlineInputBorder(
-                          borderSide: BorderSide(color: Colors.white),
+                          borderSide: BorderSide(color: Color(0xFFF062AE)),
                         ),
                       ),
                       validator: (value) {
@@ -183,7 +187,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           ? const SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white),
                             )
                           : const Text('Log in'),
                     ),
