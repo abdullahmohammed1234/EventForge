@@ -5,6 +5,8 @@ import '../events/my_events_screen.dart';
 import '../events/events_provider.dart';
 import '../search/search_screen.dart';
 import '../profile/profile_screen.dart';
+import '../events/widgets/bottom_floating_nav.dart';
+import '../events/create_events_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final int startingIndex;
@@ -20,10 +22,11 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isInitialized = false;
 
   final List<Widget> _screens = const [
-    EventsFeedScreen(),
-    SearchScreen(),
-    MyEventsScreen(),
-    ProfileScreen(),
+    EventsFeedScreen(), // 0 Home
+    SearchScreen(), // 1
+    CreateEventScreen(), // 2 (center create button)
+    MyEventsScreen(), // 3
+    ProfileScreen(), // 4
   ];
 
   @override
@@ -54,7 +57,8 @@ class _HomeScreenState extends State<HomeScreen> {
         debugPrint('HomeScreen: Calling initialize...');
         final provider = Provider.of<EventsProvider>(context, listen: false);
         provider.initialize().then((_) {
-          debugPrint('HomeScreen: Initialize complete - registered: ${provider.registeredEvents.length}');
+          debugPrint(
+              'HomeScreen: Initialize complete - registered: ${provider.registeredEvents.length}');
         });
       });
     }
@@ -67,31 +71,13 @@ class _HomeScreenState extends State<HomeScreen> {
         index: _currentIndex,
         children: _screens,
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: _onTabSelected,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.event_outlined),
-            selectedIcon: Icon(Icons.event),
-            label: 'Events',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.search_outlined),
-            selectedIcon: Icon(Icons.search),
-            label: 'Search',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.event_available_outlined),
-            selectedIcon: Icon(Icons.event_available),
-            label: 'My Events',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: BottomFloatingNav(
+          currentIndex: _currentIndex,
+          onTap: _onTabSelected,
+          accentColor: const Color(0xFFFF6BBA),
+        ),
       ),
     );
   }

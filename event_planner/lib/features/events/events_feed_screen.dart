@@ -12,12 +12,11 @@ import '../../core/config/app_config.dart';
 String _selectedCity = "Surrey";
 
 final List<String> _cities = [
-  "Burnaby",
   "Coquitlam",
-  "Langley",
-  "Richmond",
   "Surrey",
+  "Richmond",
   "Vancouver",
+  "Burnaby",
 ];
 
 String _getDaysRemaining(DateTime date) {
@@ -29,27 +28,17 @@ String _getDaysRemaining(DateTime date) {
 }
 
 String _getCleanLocation(Event event) {
-  final street = event.address?.trim() ?? '';
-  final place = event.location?.name?.trim() ?? '';
-  final city = event.city?.trim() ?? '';
-
-  bool containsCity(String text) {
-    return city.isNotEmpty && text.toLowerCase().contains(city.toLowerCase());
-  }
+  final street = event.address ?? '';
+  final place = event.location?.name ?? '';
+  final city = event.city ?? '';
 
   // Priority: street > place > city
-  if (street.isNotEmpty) {
-    if (city.isNotEmpty && !containsCity(street)) {
-      return "$street, $city";
-    }
-    return street;
+  if (street.isNotEmpty && city.isNotEmpty) {
+    return "$street, $city";
   }
 
-  if (place.isNotEmpty) {
-    if (city.isNotEmpty && !containsCity(place)) {
-      return "$place, $city";
-    }
-    return place;
+  if (place.isNotEmpty && place != city) {
+    return "$place, $city";
   }
 
   return city;
@@ -222,7 +211,7 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 18,
+                        fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -244,7 +233,7 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
                     Text(
                       _getCleanLocation(event),
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         color: Colors.grey[600],
                       ),
                     ),
@@ -290,13 +279,13 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
             await context.read<EventsProvider>().fetchEvents(refresh: true);
           },
           child: SingleChildScrollView(
-            padding: const EdgeInsets.only(bottom: 40),
+            padding: const EdgeInsets.only(bottom: 100),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 12),
 
-                /// 👋 HEADER
+                /// HEADER
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
@@ -318,7 +307,7 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
                     ? _buildEmptyUpcoming()
                     : _buildUpcomingEvent(savedEvents),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
 
                 /// DISCOVER NEAR YOU
                 _buildLocationHeader(),
@@ -334,28 +323,17 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
                   }).toList(),
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 24),
 
                 /// POPULAR EVENTS
                 _buildHotEventsHeader(),
                 const SizedBox(height: 12),
                 _buildCategoryBar(),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 _buildHorizontalEvents(
                     _getFilteredHotEvents(eventsProvider.events)),
               ],
             ),
-          ),
-        ),
-
-        /// FAB
-        Positioned(
-          bottom: 16,
-          right: 16,
-          child: FloatingActionButton.extended(
-            onPressed: () => context.go('/events/create'),
-            label: const Text('Create Event'),
-            icon: const Icon(Icons.add),
           ),
         ),
       ],
@@ -451,9 +429,7 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
               ),
               const Spacer(),
               TextButton(
-                onPressed: () {
-                  context.push('/search?city=$_selectedCity');
-                },
+                onPressed: () {},
                 child: Text(
                   "View All >",
                   style: TextStyle(color: Colors.grey[500]),
@@ -477,21 +453,8 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
           ),
           const Spacer(),
           TextButton(
-            onPressed: () {
-              final selectedCategory = _selectedCategoryIndex == 0
-                  ? null
-                  : _categories[_selectedCategoryIndex].label.toLowerCase();
-
-              context.push(
-                selectedCategory != null
-                    ? '/search?type=popular&category=$selectedCategory'
-                    : '/search?type=popular',
-              );
-            },
-            child: Text(
-              "View All >",
-              style: TextStyle(color: Colors.grey[500]),
-            ),
+            onPressed: () {},
+            child: const Text("View All >"),
           ),
         ],
       ),
@@ -780,89 +743,26 @@ class EventCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => context.push('/events/${event.id}'),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
+        margin: const EdgeInsets.only(bottom: 18),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(18),
           color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              blurRadius: 8,
-              color: Colors.black.withOpacity(0.05),
-              offset: const Offset(0, 4),
-            )
-          ],
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            /// IMAGE
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(20),
-              ),
-              child: Image.network(
-                AppConfig.getFullUrl(event.coverImageUrl),
-                height: 180,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  height: 180,
-                  color: Colors.grey[300],
-                ),
-              ),
-            ),
-
-            /// CONTENT
+            (event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty)
+                ? Image.network(
+                    AppConfig.getFullUrl(event.coverImageUrl),
+                    errorBuilder: (_, __, ___) => Container(
+                      height: 130,
+                      color: Colors.grey[300],
+                      child: const Icon(Icons.image),
+                    ),
+                  )
+                : Container(height: 180, color: Colors.grey[300]),
             Padding(
               padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    event.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on, size: 14),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          "${_getCleanLocation(event)} • ${DateFormat('h:mm a').format(event.startTime)}",
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.person, size: 14),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          "By ${event.organizer?.name ?? 'Unknown'}",
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey[500],
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+              child: Text(event.title),
             ),
           ],
         ),
