@@ -339,4 +339,32 @@ router.post('/:id/comments', auth, asyncWrapper(eventsController.addComment));
  */
 router.delete('/:id/comments/:commentId', auth, asyncWrapper(eventsController.deleteComment));
 
+/**
+ * @desc    Get RSVP analytics for event
+ * @route   GET /api/events/:id/analytics
+ * @access  Private (Event organizer)
+ */
+router.get('/:id/analytics', auth, asyncWrapper(eventsController.getRsvpAnalytics));
+
+/**
+ * @desc    Update age restriction
+ * @route   PUT /api/events/:id/age-restriction
+ * @access  Private (Event organizer)
+ */
+router.put('/:id/age-restriction', auth, asyncWrapper(eventsController.updateAgeRestriction));
+
+/**
+ * @desc    Add photo to gallery
+ * @route   POST /api/events/:id/gallery
+ * @access  Private (Attendee)
+ */
+router.post('/:id/gallery', auth, asyncWrapper(eventsController.addPhotoToGallery));
+
+/**
+ * @desc    Set RSVP status (going/maybe/interested)
+ * @route   POST /api/events/:id/rsvp
+ * @access  Private
+ */
+router.post('/:id/rsvp', auth, asyncWrapper(eventsController.setRsvpStatus));
+
 module.exports = router;

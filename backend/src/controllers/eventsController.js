@@ -4,6 +4,7 @@ const Event = require('../models/Event');
 const asyncWrapper = require('../utils/asyncWrapper');
 const { APIError } = require('../middleware/errorHandler');
 const { handleUpload } = require('../utils/upload');
+const contentSecurity = require('../services/contentSecurityService');
 
 /**
  * @desc    Get all events (with pagination and filters)
@@ -43,6 +44,27 @@ const getEvents = asyncWrapper(async (req, res, next) => {
   // Filter by upcoming only
   if (req.query.upcoming === 'true') {
     filter.startTime = { $gte: new Date() };
+  }
+
+  // Filter by minimum age
+  if (req.query.minAge) {
+    const minAge = parseInt(req.query.minAge);
+    filter.$or = [
+      { minAge: { $lte: minAge } },
+      { minAge: null },
+      { minAge: { $exists: false } },
+    ];
+  }
+
+  // Filter by age restriction
+  if (req.query.maxAge) {
+    const maxAge = parseInt(req.query.maxAge);
+    filter.$or = filter.$or || [];
+    filter.$or.push(
+      { minAge: { $gte: maxAge } },
+      { minAge: null },
+      { minAge: { $exists: false } },
+    );
   }
 
   // Execute query with pagination
@@ -192,6 +214,8 @@ const createEvent = asyncWrapper(async (req, res, next) => {
     highlights,
     isFree,
     price,
+    minAge,
+    photoGallery,
   } = req.body;
 
   // Validate dates
@@ -202,6 +226,21 @@ const createEvent = asyncWrapper(async (req, res, next) => {
 
   if (start <= new Date()) {
     return next(new APIError('Start time must be in the future', 400));
+  }
+
+  const securityValidation = contentSecurity.validateEventCreation({
+    title,
+    description,
+    tags,
+  });
+
+  if (!securityValidation.valid) {
+    return next(new APIError(`Event blocked: ${securityValidation.reason}`, 400));
+  }
+
+  let eventMinAge = minAge || null;
+  if (securityValidation.recommendedMinAge && !minAge) {
+    eventMinAge = securityValidation.recommendedMinAge;
   }
 
   // Build location object
@@ -229,6 +268,8 @@ const createEvent = asyncWrapper(async (req, res, next) => {
     highlights: highlights || [],
     isFree: isFree !== undefined ? isFree : true,
     price: price || 0,
+    minAge: eventMinAge,
+    photoGallery: photoGallery || [],
   });
 
   await event.save();
@@ -996,6 +1037,11 @@ const addComment = asyncWrapper(async (req, res, next) => {
     return next(new APIError('Comment content is required', 400));
   }
 
+  const commentSecurity = contentSecurity.checkCommentSecurity(content);
+  if (commentSecurity.shouldBlock) {
+    return next(new APIError('Comment contains inappropriate content', 400));
+  }
+
   const comment = {
     content: content.trim(),
     createdBy: req.userId,
@@ -1037,6 +1083,178 @@ const deleteComment = asyncWrapper(async (req, res, next) => {
   });
 });
 
+const getRsvpAnalytics = asyncWrapper(async (req, res, next) => {
+  const event = await Event.findById(req.params.id);
+
+  if (!event) {
+    return next(new APIError('Event not found', 404));
+  }
+
+  if (event.createdBy.toString() !== req.userId.toString()) {
+    return next(new APIError('Not authorized to view analytics for this event', 403));
+  }
+
+  const registered = event.attendees.filter(a => a.status === 'registered');
+  const cancelled = event.attendees.filter(a => a.status === 'cancelled');
+
+  const totalRegistrations = registered.length;
+  const totalCancellations = cancelled.length;
+  
+  const uniqueAttendees = new Set([
+    ...registered.map(a => a.user.toString()),
+    ...cancelled.map(a => a.user.toString()),
+  ]).size;
+
+  const now = new Date();
+  const upcoming = event.startTime > now;
+  const daysUntilEvent = Math.ceil(
+    (event.startTime - now) / (1000 * 60 * 60 * 24)
+  );
+
+  res.json({
+    success: true,
+    data: {
+      totalRegistrations,
+      totalCancellations,
+      uniqueAttendees,
+      currentAttendees: event.currentAttendees,
+      maxAttendees: event.maxAttendees,
+      capacity: event.maxAttendees 
+        ? Math.round((event.currentAttendees / event.maxAttendees) * 100)
+        : null,
+      status: upcoming ? 'upcoming' : 'past',
+      daysUntilEvent: upcoming ? daysUntilEvent : null,
+      registrationTrend: {
+        registeredToday: registered.filter(a => {
+          const regDate = new Date(a.registeredAt);
+          const today = new Date();
+          return regDate.toDateString() === today.toDateString();
+        }).length,
+        registeredThisWeek: registered.filter(a => {
+          const regDate = new Date(a.registeredAt);
+          const weekAgo = new Date();
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          return regDate > weekAgo;
+        }).length,
+      },
+    },
+  });
+});
+
+const updateAgeRestriction = asyncWrapper(async (req, res, next) => {
+  const event = await Event.findById(req.params.id);
+
+  if (!event) {
+    return next(new APIError('Event not found', 404));
+  }
+
+  if (event.createdBy.toString() !== req.userId.toString()) {
+    return next(new APIError('Not authorized to update this event', 403));
+  }
+
+  const { minAge } = req.body;
+
+  if (minAge !== undefined) {
+    if (minAge === null) {
+      event.minAge = null;
+    } else {
+      const age = parseInt(minAge);
+      if (isNaN(age) || age < 0 || age > 21) {
+        return next(new APIError('Min age must be between 0 and 21', 400));
+      }
+      event.minAge = age;
+    }
+  }
+
+  await event.save();
+
+  res.json({
+    success: true,
+    message: 'Age restriction updated',
+    data: { minAge: event.minAge },
+  });
+});
+
+const addPhotoToGallery = asyncWrapper(async (req, res, next) => {
+  const event = await Event.findById(req.params.id);
+
+  if (!event) {
+    return next(new APIError('Event not found', 404));
+  }
+
+  const { photoUrl } = req.body;
+
+  if (!photoUrl || !photoUrl.trim()) {
+    return next(new APIError('Photo URL is required', 400));
+  }
+
+  event.photoGallery.push({
+    url: photoUrl.trim(),
+    uploadedBy: req.userId,
+  });
+
+  await event.save();
+
+  res.status(201).json({
+    success: true,
+    message: 'Photo added to gallery',
+    data: { photo: event.photoGallery[event.photoGallery.length - 1] },
+  });
+});
+
+const setRsvpStatus = asyncWrapper(async (req, res, next) => {
+  const event = await Event.findById(req.params.id);
+
+  if (!event) {
+    return next(new APIError('Event not found', 404));
+  }
+
+  const { status } = req.body;
+  
+  if (!status || !['going', 'maybe', 'interested'].includes(status)) {
+    return next(new APIError('Status must be: going, maybe, or interested', 400));
+  }
+
+  const userObjectId = new mongoose.Types.ObjectId(req.userId);
+  const existingIdx = event.attendees.findIndex(
+    a => a.user.toString() === userObjectId.toString()
+  );
+
+  if (status === 'interested') {
+    if (existingIdx === -1) {
+      event.attendees.push({
+        user: userObjectId,
+        status: 'registered',
+      });
+      event.currentAttendees += 1;
+    }
+  } else if (status === 'maybe') {
+    if (existingIdx !== -1) {
+      event.attendees[existingIdx].status = 'cancelled';
+      event.currentAttendees = Math.max(0, event.currentAttendees - 1);
+    }
+  } else if (status === 'going') {
+    if (existingIdx === -1) {
+      event.attendees.push({
+        user: userObjectId,
+        status: 'registered',
+      });
+      event.currentAttendees += 1;
+    } else {
+      event.attendees[existingIdx].status = 'registered';
+      event.currentAttendees += 1;
+    }
+  }
+
+  await event.save();
+
+  res.json({
+    success: true,
+    message: `RSVP status updated to ${status}`,
+    data: { status },
+  });
+});
+
 module.exports = {
   getEvents,
   getEvent,
@@ -1061,4 +1279,8 @@ module.exports = {
   deletePoll,
   addComment,
   deleteComment,
+  getRsvpAnalytics,
+  updateAgeRestriction,
+  addPhotoToGallery,
+  setRsvpStatus,
 };
