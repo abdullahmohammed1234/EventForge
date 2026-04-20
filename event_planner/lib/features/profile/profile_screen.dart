@@ -327,7 +327,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 28),
               child: SizedBox(
                 width: 140,
                 child: ElevatedButton(

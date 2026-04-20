@@ -249,7 +249,7 @@ event_planner/
 │   ├── features/
 │   │   ├── auth/          # Login, register, auth provider
 │   │   ├── events/        # Events feed, create, detail, provider
-│   │   ├── discover/      # Discover screen with categories
+│   │   ├��─ discover/      # Discover screen with categories
 │   │   ├── profile/       # Profile screen
 │   │   ├── search/        # Search functionality
 │   │   ├── maps/          # Map view and directions
