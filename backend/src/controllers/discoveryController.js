@@ -3,6 +3,7 @@ const asyncWrapper = require('../utils/asyncWrapper');
 const externalEventService = require('../services/externalEventService');
 const rankingService = require('../services/rankingService');
 const hiddenSourcesService = require('../services/hiddenSourcesService');
+const contentSecurity = require('../services/contentSecurityService');
 
 const getHiddenGems = asyncWrapper(async (req, res, next) => {
   const page = parseInt(req.query.page) || 1;
@@ -139,6 +140,7 @@ const getDiscoverFeed = asyncWrapper(async (req, res, next) => {
   const city = req.query.city;
   const category = req.query.category;
   const feedType = req.query.feedType || 'all';
+  const userAge = req.query.userAge ? parseInt(req.query.userAge) : null;
 
   const filter = {
     isPublished: true,
@@ -151,6 +153,14 @@ const getDiscoverFeed = asyncWrapper(async (req, res, next) => {
 
   if (category) {
     filter.category = category;
+  }
+
+  if (userAge !== null) {
+    filter.$or = [
+      { minAge: { $lte: userAge } },
+      { minAge: null },
+      { minAge: { $exists: false } },
+    ];
   }
 
   switch (feedType) {

@@ -311,6 +311,33 @@ const eventSchema = new mongoose.Schema(
     todoItems: [todoItemSchema],
     polls: [pollSchema],
     comments: [commentSchema],
+    minAge: {
+      type: Number,
+      min: [0, 'Minimum age cannot be negative'],
+      max: [21, 'Maximum age is 21'],
+      default: null,
+    },
+    photoGallery: [{
+      url: {
+        type: String,
+        trim: true,
+      },
+      uploadedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+      uploadedAt: {
+        type: Date,
+        default: Date.now,
+      },
+    }],
+    reminderSettings: {
+      default: {
+        type: String,
+        enum: ['none', '30min', '1hour', '1day'],
+        default: '1hour',
+      },
+    },
   },
   {
     timestamps: true,
