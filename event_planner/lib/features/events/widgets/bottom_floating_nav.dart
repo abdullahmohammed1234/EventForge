@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 
 /// Bottom floating navigation bar with rounded container
 class BottomFloatingNav extends StatelessWidget {
@@ -19,17 +20,13 @@ class BottomFloatingNav extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 60, // Fixed height for compact nav
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: EdgeInsets.zero,
       decoration: BoxDecoration(
-        color: Colors.black,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.4),
-            blurRadius: 15,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border: Border(
+          top: BorderSide(color: Colors.grey.shade200),
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -42,25 +39,44 @@ class BottomFloatingNav extends StatelessWidget {
               index: 0,
               label: 'Home',
             ),
+
             _buildNavItem(
               icon: Icons.search_outlined,
               activeIcon: Icons.search,
               index: 1,
               label: 'Search',
             ),
-            _buildNavItem(
-              icon: Icons.add_circle_outline,
-              activeIcon: Icons.add_circle,
-              index: 2,
-              label: 'Create',
+
+            // CENTER CREATE BUTTON
+            InkWell(
+              onTap: () => onTap?.call(2),
+              child: Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: accentColor ?? const Color(0xFFFF6BBA),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: (accentColor ?? const Color(0xFFFF6BBA))
+                          .withOpacity(0.4),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.add, color: Colors.white, size: 28),
+              ),
             ),
+
             _buildNavItem(
-              icon: isFavorited ? Icons.favorite : Icons.favorite_outline,
-              activeIcon: Icons.favorite,
+              icon: isFavorited ? Icons.bookmark : Icons.bookmark_border,
+              activeIcon: Icons.bookmark,
               index: 3,
               label: 'Saved',
               isFavorite: true,
             ),
+
             _buildNavItem(
               icon: Icons.person_outline,
               activeIcon: Icons.person,
@@ -86,9 +102,8 @@ class BottomFloatingNav extends StatelessWidget {
     if (isFavorite && isFavorited && accentColor != null) {
       iconColor = accentColor!;
     } else {
-      iconColor = isActive
-          ? (accentColor ?? Colors.white)
-          : Colors.white.withOpacity(0.6);
+      iconColor =
+          isActive ? (accentColor ?? const Color(0xFFFF6BBA)) : Colors.grey;
     }
 
     return GestureDetector(
@@ -103,7 +118,15 @@ class BottomFloatingNav extends StatelessWidget {
             Icon(
               isActive ? activeIcon : icon,
               color: iconColor,
-              size: 24,
+              size: 22,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                color: iconColor,
+                fontSize: 10,
+              ),
             ),
           ],
         ),
