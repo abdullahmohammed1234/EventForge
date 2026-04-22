@@ -211,6 +211,11 @@ class EventPlannerApp extends StatelessWidget {
         builder: (context, state) => const ProfileScreen(),
       ),
       GoRoute(
+        path: '/safety-center',
+        name: 'safety-center-home',
+        builder: (context, state) => const SafetyCenterScreen(),
+      ),
+      GoRoute(
         path: '/safety/:eventId',
         name: 'safety-center',
         builder: (context, state) {

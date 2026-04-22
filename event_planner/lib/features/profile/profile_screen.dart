@@ -296,13 +296,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             child: Column(
                               children: [
-                                const _ProfileActionRow(
+                                _ProfileActionRow(
                                   icon: Icons.notifications_active_outlined,
-                                  iconBackground: Color(0xFFF5D58E),
+                                  iconBackground: const Color(0xFFF5D58E),
                                   title: 'Safety Contact',
                                   subtitle: 'Manage safety features',
-                                  onTap:
-                                      null, // TODO: implement Safety Contact page
+                                  onTap: () => context.push('/safety-center'),
                                 ),
                                 const Divider(
                                   height: 1,

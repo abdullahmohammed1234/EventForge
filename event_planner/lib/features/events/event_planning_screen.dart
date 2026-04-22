@@ -294,16 +294,8 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Choose Transportation Section
-                      _buildTransportationSection(event),
-                      const SizedBox(height: 24),
-
                       // Add Contacts Section
                       _buildContactsSection(event),
-                      const SizedBox(height: 24),
-
-                      // Destination + Estimated Time Section
-                      _buildDestinationSection(event),
                       const SizedBox(height: 24),
 
                       // Action Buttons Section
@@ -1441,22 +1433,22 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
     final isSelected = _selectedTransportation == value;
     return GestureDetector(
       onTap: () {
-  setState(() {
-    _selectedTransportation = value;
-    _transportationController.text = label;
+        setState(() {
+          _selectedTransportation = value;
+          _transportationController.text = label;
 
-    if (value == 'car') {
-      _estimatedDistance = '14.2 km';
-      _estimatedTime = '22 min';
-    } else if (value == 'transit') {
-      _estimatedDistance = '14.2 km';
-      _estimatedTime = '41 min';
-    } else if (value == 'bike') {
-      _estimatedDistance = '12.8 km';
-      _estimatedTime = '55 min';
-    }
-  });
-},
+          if (value == 'car') {
+            _estimatedDistance = '14.2 km';
+            _estimatedTime = '22 min';
+          } else if (value == 'transit') {
+            _estimatedDistance = '14.2 km';
+            _estimatedTime = '41 min';
+          } else if (value == 'bike') {
+            _estimatedDistance = '12.8 km';
+            _estimatedTime = '55 min';
+          }
+        });
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
@@ -1802,21 +1794,6 @@ class _EventPlanningScreenState extends State<EventPlanningScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            // Add to Google Calendar Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => _addToGoogleCalendar(event),
-                icon: const Icon(Icons.calendar_month),
-                label: const Text('Add to Google Calendar'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
             // Set Up Safety Features Button
             SizedBox(
               width: double.infinity,

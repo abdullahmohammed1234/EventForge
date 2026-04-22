@@ -20,9 +20,9 @@ class SafetyCenterScreen extends StatefulWidget {
 class _SafetyCenterScreenState extends State<SafetyCenterScreen> {
   List<Map<String, String>> _emergencyContacts = [];
   bool _isLoading = true;
-  
+
   static const String _emergencyContactsKey = 'emergency_contacts_';
-  
+
   String get eventName => widget.eventName ?? '';
 
   @override
@@ -34,11 +34,13 @@ class _SafetyCenterScreenState extends State<SafetyCenterScreen> {
   Future<void> _loadEmergencyContacts() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final contactsJson = prefs.getString('$_emergencyContactsKey${widget.eventId ?? "default"}');
+      final contactsJson = prefs
+          .getString('$_emergencyContactsKey${widget.eventId ?? "default"}');
       if (contactsJson != null && contactsJson.isNotEmpty) {
         final List<dynamic> decoded = json.decode(contactsJson);
         setState(() {
-          _emergencyContacts = decoded.map((e) => Map<String, String>.from(e)).toList();
+          _emergencyContacts =
+              decoded.map((e) => Map<String, String>.from(e)).toList();
           _isLoading = false;
         });
       } else {
@@ -57,7 +59,8 @@ class _SafetyCenterScreenState extends State<SafetyCenterScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final contactsJson = json.encode(_emergencyContacts);
-      await prefs.setString('$_emergencyContactsKey${widget.eventId ?? "default"}', contactsJson);
+      await prefs.setString(
+          '$_emergencyContactsKey${widget.eventId ?? "default"}', contactsJson);
     } catch (e) {
       // Silently fail
     }
@@ -76,50 +79,51 @@ class _SafetyCenterScreenState extends State<SafetyCenterScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Your security settings line
-            Text(
-              'Your security settings',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Your security settings line
+                  Text(
+                    'Your security settings',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // All System Active Section
+                  _buildSystemActiveSection(context),
+                  const SizedBox(height: 24),
+
+                  // Emergency Contacts Section
+                  _buildEmergencyContactsSection(context),
+                  const SizedBox(height: 24),
+
+                  // Live Location Sharing Section
+                  _buildLiveLocationSharingSection(context),
+                  const SizedBox(height: 24),
+
+                  // Auto Check-in Section
+                  _buildAutoCheckInSection(context),
+                  const SizedBox(height: 24),
+
+                  // Emergency Alerts Section
+                  _buildEmergencyAlertsSection(context),
+                  const SizedBox(height: 24),
+
+                  // Safety Tips Section
+                  _buildSafetyTipsSection(context),
+                  const SizedBox(height: 32),
+                ],
               ),
             ),
-            const SizedBox(height: 24),
-
-            // All System Active Section
-            _buildSystemActiveSection(context),
-            const SizedBox(height: 24),
-
-            // Emergency Contacts Section
-            _buildEmergencyContactsSection(context),
-            const SizedBox(height: 24),
-
-            // Live Location Sharing Section
-            _buildLiveLocationSharingSection(context),
-            const SizedBox(height: 24),
-
-            // Auto Check-in Section
-            _buildAutoCheckInSection(context),
-            const SizedBox(height: 24),
-
-            // Emergency Alerts Section
-            _buildEmergencyAlertsSection(context),
-            const SizedBox(height: 24),
-
-            // Safety Tips Section
-            _buildSafetyTipsSection(context),
-            const SizedBox(height: 32),
-          ],
-        ),
-      ),
     );
   }
 
   Widget _buildSystemActiveSection(BuildContext context) {
+    final primaryColor = Theme.of(context).primaryColor;
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -127,16 +131,15 @@ class _SafetyCenterScreenState extends State<SafetyCenterScreen> {
         padding: const EdgeInsets.all(20),
         child: Row(
           children: [
-            // Shield Icon
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
+                color: primaryColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.shield,
-                color: Colors.green,
+                color: primaryColor,
                 size: 40,
               ),
             ),
@@ -150,24 +153,24 @@ class _SafetyCenterScreenState extends State<SafetyCenterScreen> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Theme.of(context).primaryColor,
+                      color: primaryColor,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'You are protected',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.green,
+                      color: primaryColor,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               Icons.check_circle,
-              color: Colors.green,
+              color: primaryColor,
               size: 28,
             ),
           ],
@@ -252,50 +255,51 @@ class _SafetyCenterScreenState extends State<SafetyCenterScreen> {
               )
             else
               ...(_emergencyContacts.map((contact) => Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.red[50],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    const CircleAvatar(
-                      radius: 20,
-                      backgroundColor: Colors.red,
-                      child: Icon(Icons.person, color: Colors.white),
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red[50],
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            contact['name'] ?? '',
-                            style: const TextStyle(fontWeight: FontWeight.w500),
+                    child: Row(
+                      children: [
+                        const CircleAvatar(
+                          radius: 20,
+                          backgroundColor: Colors.red,
+                          child: Icon(Icons.person, color: Colors.white),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                contact['name'] ?? '',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w500),
+                              ),
+                              Text(
+                                contact['phone'] ?? '',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
                           ),
-                          Text(
-                            contact['phone'] ?? '',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () {
+                            setState(() {
+                              _emergencyContacts.remove(contact);
+                            });
+                            _saveEmergencyContacts();
+                          },
+                        ),
+                      ],
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () {
-                        setState(() {
-                          _emergencyContacts.remove(contact);
-                        });
-                        _saveEmergencyContacts();
-                      },
-                    ),
-                  ],
-                ),
-              ))),
+                  ))),
           ],
         ),
       ),
@@ -627,7 +631,8 @@ class _SafetyCenterScreenState extends State<SafetyCenterScreen> {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Check-in successful! Your contacts have been notified.'),
+                  content: Text(
+                      'Check-in successful! Your contacts have been notified.'),
                   backgroundColor: Colors.green,
                 ),
               );
@@ -684,5 +689,4 @@ class _SafetyCenterScreenState extends State<SafetyCenterScreen> {
       ),
     );
   }
-
 }
