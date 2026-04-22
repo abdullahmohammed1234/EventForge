@@ -282,7 +282,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 children: [
                   _CircleIconButton(
                     icon: Icons.arrow_back,
-                    onTap: () => context.go('/events'),
+                    onTap: () => context.pop(),
                   ),
                   const Expanded(
                     child: Center(

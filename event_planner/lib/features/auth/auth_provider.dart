@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
 import '../../core/api/auth_service.dart';
 import '../../core/config/app_config.dart';
 import '../../core/utils/storage_helper.dart';
@@ -86,6 +87,26 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<void> _loadProfileImageFromUrlIfNeeded() async {
+    if (_profileImage != null) return; // Already have local image
+    final avatarUrl = _user?.avatarUrl;
+    if (avatarUrl == null || avatarUrl.isEmpty) return;
+
+    try {
+      final absoluteUrl = AppConfig.getFullUrl(avatarUrl);
+      debugPrint('Fetching profile image from: $absoluteUrl');
+      final response = await http.get(Uri.parse(absoluteUrl));
+      if (response.statusCode == 200) {
+        _profileImage = response.bodyBytes;
+        await setProfileImage(_profileImage);
+      } else {
+        debugPrint('Failed to fetch profile image: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Failed to load profile image from URL: $e');
+    }
+  }
+
   AuthProvider({
     required this.authService,
     required this.storage,
@@ -115,6 +136,8 @@ class AuthProvider with ChangeNotifier {
         }
         // Load profile image from storage
         await _loadProfileImage();
+        // If no local image but user has avatarUrl, fetch from server
+        await _loadProfileImageFromUrlIfNeeded();
       }
     } catch (e) {
       _error = 'Error checking auth status';
@@ -149,6 +172,8 @@ class AuthProvider with ChangeNotifier {
 
         await storageHelper.saveToken(_token!);
         await storageHelper.saveUserData(jsonEncode(_user!.toJson()));
+        // Load profile image from server if not set locally
+        await _loadProfileImageFromUrlIfNeeded();
 
         _isLoading = false;
         notifyListeners();
@@ -198,6 +223,8 @@ class AuthProvider with ChangeNotifier {
 
         await storageHelper.saveToken(_token!);
         await storageHelper.saveUserData(jsonEncode(_user!.toJson()));
+        // Load profile image from server if not set locally
+        await _loadProfileImageFromUrlIfNeeded();
 
         _isLoading = false;
         notifyListeners();
