@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../auth/auth_provider.dart';
+import '../home/home_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -123,7 +124,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         children: [
                           _CircleIconButton(
                             icon: Icons.arrow_back,
-                            onTap: () => Navigator.of(context).maybePop(),
+                            onTap: () => TabSwitcher.switchToEventsTab(context),
                           ),
                           const Expanded(
                             child: Center(
@@ -561,7 +562,7 @@ class PersonalInformationScreen extends StatelessWidget {
                 children: [
                   _CircleIconButton(
                     icon: Icons.arrow_back,
-                    onTap: () => Navigator.of(context).pop(),
+                    onTap: () => context.go('/events'),
                   ),
                   const Expanded(
                     child: Center(

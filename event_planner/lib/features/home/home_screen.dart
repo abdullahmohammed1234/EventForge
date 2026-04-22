@@ -8,6 +8,24 @@ import '../profile/profile_screen.dart';
 import '../events/widgets/bottom_floating_nav.dart';
 import '../events/create_events_screen.dart';
 
+class TabSwitcher extends InheritedWidget {
+  final VoidCallback switchToEvents;
+
+  const TabSwitcher({
+    super.key,
+    required this.switchToEvents,
+    required super.child,
+  });
+
+  @override
+  bool updateShouldNotify(TabSwitcher oldWidget) => true;
+
+  static void switchToEventsTab(BuildContext context) {
+    final switcher = context.dependOnInheritedWidgetOfExactType<TabSwitcher>();
+    switcher?.switchToEvents();
+  }
+}
+
 class HomeScreen extends StatefulWidget {
   final int startingIndex;
 
@@ -66,17 +84,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: BottomFloatingNav(
-          currentIndex: _currentIndex,
-          onTap: _onTabSelected,
-          accentColor: const Color(0xFFFF6BBA),
+    return TabSwitcher(
+      switchToEvents: () => _onTabSelected(0),
+      child: Scaffold(
+        body: IndexedStack(
+          index: _currentIndex,
+          children: _screens,
+        ),
+        bottomNavigationBar: SafeArea(
+          top: false,
+          child: BottomFloatingNav(
+            currentIndex: _currentIndex,
+            onTap: _onTabSelected,
+            accentColor: const Color(0xFFFF6BBA),
+          ),
         ),
       ),
     );
