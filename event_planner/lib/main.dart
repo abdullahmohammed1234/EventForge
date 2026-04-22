@@ -31,6 +31,7 @@ import 'features/profile/profile_screen.dart';
 import 'features/safety/safety_center_screen.dart';
 import 'features/notifications/notifications_screen.dart';
 import 'features/messages/messages_screen.dart';
+import 'features/events/events_view_all_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -172,6 +173,17 @@ class EventPlannerApp extends StatelessWidget {
         path: '/events',
         name: 'events',
         builder: (context, state) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: '/events/view-all',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+
+          return EventsViewAllScreen(
+            city: extra?['city'],
+            category: extra?['category'],
+          );
+        },
       ),
       GoRoute(
         path: '/events/create',
