@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'events_provider.dart';
 import '../../core/config/app_config.dart';
+import '../home/home_screen.dart';
 
 class CreateEventScreen extends StatefulWidget {
   const CreateEventScreen({super.key});
@@ -282,7 +283,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 children: [
                   _CircleIconButton(
                     icon: Icons.arrow_back,
-                    onTap: () => context.pop(),
+                    onTap: () => TabSwitcher.switchToEventsTab(context),
                   ),
                   const Expanded(
                     child: Center(
