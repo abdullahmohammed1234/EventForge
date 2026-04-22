@@ -165,13 +165,20 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
                 flex: 4,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                  child: Image.network(
-                    AppConfig.getFullUrl(event.coverImageUrl),
-                    height: 120,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      height: 120,
-                      color: Colors.grey[300],
+                  child: SizedBox(
+                    height: 140,
+                    width: 160,
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: Image.network(
+                            AppConfig.getFullUrl(event.coverImageUrl),
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                Container(color: Colors.grey[300]),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -279,7 +286,7 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
             await context.read<EventsProvider>().fetchEvents(refresh: true);
           },
           child: SingleChildScrollView(
-            padding: const EdgeInsets.only(bottom: 100),
+            padding: const EdgeInsets.only(bottom: 32),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -301,18 +308,18 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
 
                 /// UPCOMING (Saved Events)
                 _buildSectionTitle("Upcoming Event"),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
 
                 savedEvents.isEmpty
                     ? _buildEmptyUpcoming()
                     : _buildUpcomingEvent(savedEvents),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
 
                 /// DISCOVER NEAR YOU
                 _buildLocationHeader(),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
 
                 _buildHorizontalEvents(
                   eventsProvider.events.where((e) {
@@ -323,11 +330,11 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
                   }).toList(),
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
 
                 /// POPULAR EVENTS
                 _buildHotEventsHeader(),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 _buildCategoryBar(),
                 const SizedBox(height: 16),
                 _buildHorizontalEvents(
@@ -393,7 +400,7 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
             ),
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
           /// CITY DROPDOWN ROW
           Row(
@@ -429,7 +436,14 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
               ),
               const Spacer(),
               TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  context.push(
+                    '/events/view-all',
+                    extra: {
+                      'city': _selectedCity,
+                    },
+                  );
+                },
                 child: Text(
                   "View All >",
                   style: TextStyle(color: Colors.grey[500]),
@@ -453,9 +467,23 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
           ),
           const Spacer(),
           TextButton(
-            onPressed: () {},
-            child: const Text("View All >"),
-          ),
+            onPressed: () {
+              final selectedCategory =
+                  _categories[_selectedCategoryIndex].label;
+
+              final Map<String, dynamic> extra = {};
+
+              if (selectedCategory != 'All') {
+                extra['category'] = selectedCategory.toLowerCase();
+              }
+
+              context.push('/events/view-all', extra: extra);
+            },
+            child: Text(
+              "View All >",
+              style: TextStyle(color: Colors.grey[500]),
+            ),
+          )
         ],
       ),
     );
@@ -464,13 +492,13 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
   Widget _buildHorizontalEvents(List<Event> events) {
     if (events.isEmpty) {
       return const SizedBox(
-        height: 120,
+        height: 200,
         child: Center(child: Text("No events")),
       );
     }
 
     return SizedBox(
-      height: 260,
+      height: 230,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -491,15 +519,75 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(16),
-                        child: Image.network(
-                          AppConfig.getFullUrl(event.coverImageUrl),
+                        child: SizedBox(
                           height: 140,
                           width: 160,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            height: 140,
-                            width: 160,
-                            color: Colors.grey[300],
+                          child: Stack(
+                            children: [
+                              Positioned.fill(
+                                child: Image.network(
+                                  AppConfig.getFullUrl(event.coverImageUrl),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) =>
+                                      Container(color: Colors.grey[300]),
+                                ),
+                              ),
+
+                              /// DATE BADGE (same style)
+                              Positioned(
+                                top: 8,
+                                left: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFE76B8),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(color: Colors.black),
+                                  ),
+                                  child: Text(
+                                    DateFormat('MMM d').format(event.startTime),
+                                    style: const TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: GestureDetector(
+                                  onTap: () async {
+                                    final provider =
+                                        context.read<EventsProvider>();
+
+                                    if (event.isUserSaved) {
+                                      await provider.unsaveEvent(event.id);
+                                    } else {
+                                      await provider.saveEvent(event.id);
+                                    }
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      event.isUserSaved
+                                          ? Icons.bookmark
+                                          : Icons.bookmark_border,
+                                      size: 18,
+                                      color: const Color(0xFFFE76B8),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -603,11 +691,13 @@ class _EventsFeedScreenState extends State<EventsFeedScreen> {
 class EventCard extends StatelessWidget {
   final Event event;
   final bool isHorizontal;
+  final bool isGrid;
 
   const EventCard({
     super.key,
     required this.event,
     this.isHorizontal = false,
+    this.isGrid = false,
   });
 
   @override
@@ -615,7 +705,7 @@ class EventCard extends StatelessWidget {
     return isHorizontal ? _buildHorizontal(context) : _buildVertical(context);
   }
 
-  /// HORIZONTAL (your new UI)
+  /// HORIZONTAL
   Widget _buildHorizontal(BuildContext context) {
     return GestureDetector(
       onTap: () => context.push('/events/${event.id}'),
@@ -636,52 +726,56 @@ class EventCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(20),
-                  ),
-                  child: (event.coverImageUrl != null &&
-                          event.coverImageUrl!.isNotEmpty)
-                      ? Image.network(
-                          AppConfig.getFullUrl(event.coverImageUrl),
-                          height: isHorizontal ? 130 : 180,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            height: isHorizontal ? 130 : 180,
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.image),
-                          ),
-                        )
-                      : Container(
-                          height: 130,
-                          color: Colors.grey[300],
-                        ),
-                ),
-
-                /// DATE BADGE
-                Positioned(
-                  top: 8,
-                  left: 8,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.pinkAccent,
-                      borderRadius: BorderRadius.circular(20),
+            AspectRatio(
+              aspectRatio: isHorizontal ? 1.4 : 1.6,
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(20),
                     ),
-                    child: Text(
-                      DateFormat('MMM d').format(event.startTime),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
+                    child: (event.coverImageUrl != null &&
+                            event.coverImageUrl!.isNotEmpty)
+                        ? Image.network(
+                            AppConfig.getFullUrl(event.coverImageUrl),
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              color: Colors.grey[300],
+                            ),
+                          )
+                        : Container(color: Colors.grey[300]),
+                  ),
+
+                  /// DATE BADGE
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFE76B8),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.black,
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        DateFormat('MMM d').format(event.startTime),
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             Padding(
               padding: const EdgeInsets.all(10),
